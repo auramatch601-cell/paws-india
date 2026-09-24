@@ -15,22 +15,30 @@ export const getAccountStatus = createServerFn({ method: "POST" })
   .inputValidator((input: { email: string }) => ({ email: String(input.email ?? "").trim().toLowerCase() }))
   .handler(async ({ data }): Promise<AccountStatus> => {
     if (!data.email || !data.email.includes("@")) return { state: "unknown", email: data.email };
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    const user = list?.users?.find((u) => (u.email ?? "").toLowerCase() === data.email);
-    if (!user) return { state: "unknown", email: data.email };
+      const { data: list } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+      const user = list?.users?.find((u) => (u.email ?? "").toLowerCase() === data.email);
+      if (!user) return { state: "unknown", email: data.email };
 
-    if (user.banned_until && new Date(user.banned_until as string).getTime() > Date.now()) {
-      return { state: "blocked", email: data.email };
+      if (user.banned_until && new Date(user.banned_until as string).getTime() > Date.now()) {
+        return { state: "blocked", email: data.email };
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("status")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile?.status && profile.status !== "active") return { state: "blocked", email: data.email };
+
+      return { state: user.email_confirmed_at ? "confirmed" : "unconfirmed", email: data.email };
+    } catch (error) {
+      // Account lookup is only guidance for the sign-in form. If Cloud is
+      // briefly unavailable, let password auth return its normal error rather
+      // than blanking the page because this optional lookup failed.
+      console.error("Account status lookup unavailable", error);
+      return { state: "unknown", email: data.email };
     }
-
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("status")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profile?.status && profile.status !== "active") return { state: "blocked", email: data.email };
-
-    return { state: user.email_confirmed_at ? "confirmed" : "unconfirmed", email: data.email };
   });
