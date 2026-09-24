@@ -1,73 +1,304 @@
-# Welcome to your Lovable project
+# Paws India
 
-## Project info
+Create a premium, modern, scalable pet marketplace website for India focused ONLY on DOG and CAT selling.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+The website concept is inspired by platforms like Mr n Mrs Pet but must have a UNIQUE brand identity, cleaner UI, and a powerful admin-controlled marketplace system.
 
-## How can I edit this code?
+BUSINESS MODEL (VERY IMPORTANT)
 
-There are several ways of editing your application.
+This platform works as a B2B + B2C marketplace:
 
-**Use Lovable**
+1. Breeders/Sellers from all India submit dogs or cats with their OFFER PRICE (B2B price).
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+2. This seller price is visible ONLY to Admin.
 
-Changes made via Lovable will be committed automatically to this repo.
+3. Admin can ACCEPT or REJECT the offer.
 
-**Use your preferred IDE**
+4. Only admin-approved pets appear publicly.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+5. Admin sets final selling price (markup controlled by admin).
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+6. Customers only see admin selling price.
 
-Follow these steps:
+7. Buyers and sellers must NEVER contact each other directly.
+
+8. Website owner acts as the main seller.
+
+GOAL:
+
+Build India's trusted pet selling marketplace where breeders list pets and customers buy easily based on location and breed.
+
+--------------------------------------------------
+
+UI LAYOUT (IMPORTANT – FOLLOW STRUCTURE)
+
+TOP SEARCH BAR
+
+- Dropdown: Pet Type (Dogs / Cats)
+
+- Dropdown: State
+
+- Dropdown: City
+
+- Purple Search Button
+
+- Rounded modern inputs with soft shadow
+
+PAGE STRUCTURE:
+
+Two-column layout.
+
+LEFT SIDEBAR (Sticky)
+
+- Add Pet (+ icon)
+
+- For Sale
+
+- For Adoption
+
+- For Mating
+
+FILTER SECTION:
+
+Title: Filter
+
+"I'm Looking"
+
+- For Buying
+
+- For Adoption
+
+Filters:
+
+- Breed
+
+- Price Range
+
+- Age
+
+- Gender
+
+- Location
+
+MAIN CONTENT AREA
+
+Breadcrumb:
+
+Home > Dogs for Sale
+
+Heading:
+
+Dogs For Sale
+
+Show result count + short description.
+
+PET LIST GRID:
+
+3 cards per row.
+
+Each Pet Card contains:
+
+- Pet Image
+
+- "Pet Quality" badge (top-right)
+
+- Breed Name
+
+- Location
+
+- Age
+
+- Vaccination Status
+
+- Price
+
+- Short description
+
+- View Details button
+
+Card Design:
+
+- Rounded corners
+
+- Soft shadow
+
+- Hover animation
+
+- Premium marketplace look
+
+FLOATING BUTTON:
+
+Add WhatsApp / Call button fixed on right side.
+
+--------------------------------------------------
+
+SELLER (BREEDER) SYSTEM
+
+Seller Dashboard:
+
+- Register/Login
+
+- Submit dog or cat
+
+- Upload images & video
+
+- Enter breed
+
+- Enter age & gender
+
+- Enter vaccination info
+
+- Enter LOCATION (City/State)
+
+- Enter OFFER PRICE (Private to Admin)
+
+Status:
+
+Pending / Accepted / Rejected
+
+--------------------------------------------------
+
+ADMIN PANEL (FULL CONTROL)
+
+Admin can:
+
+- Approve or reject listings
+
+- Edit pet details
+
+- Change selling price
+
+- Control markup price
+
+- Manage sellers
+
+- Manage customers
+
+- Track pets city-wise
+
+- View offers
+
+- Manage orders
+
+--------------------------------------------------
+
+CUSTOMER EXPERIENCE
+
+Customers can:
+
+- Search pets by city
+
+- Filter by breed
+
+- Browse dogs & cats separately
+
+- View pet details
+
+- Simple enquiry or buy process
+
+- Mobile-friendly fast experience
+
+--------------------------------------------------
+
+EXTRA FEATURES
+
+- Location-based pet listing (All India)
+
+- Verified breeder badge
+
+- Pet care blog
+
+- Pet health guarantee section
+
+- Delivery across India info
+
+- SEO optimized pages
+
+- Fast loading design
+
+--------------------------------------------------
+
+DESIGN STYLE
+
+- Clean modern UI
+
+- White & light grey background
+
+- Purple accent color
+
+- Large pet images
+
+- Premium typography
+
+- Smooth animations
+
+- Mobile-first responsive design
+
+- Trust-focused layout
+
+--------------------------------------------------
+
+PAGES REQUIRED
+
+Home
+
+Dogs Listing
+
+Cats Listing
+
+Pet Details
+
+Seller Registration
+
+Seller Dashboard
+
+Admin Dashboard
+
+Checkout / Enquiry
+
+About Us
+
+Contact
+
+Pet Care Blog
+
+--------------------------------------------------
+
+TECH SUGGESTION
+
+Frontend: React or Next.js
+
+Backend: Node.js
+
+Database: MongoDB
+
+Cloud Image Storage
+
+SEO optimized structure
+
+--------------------------------------------------
+
+FINAL GOAL
+
+Create a simple user experience but powerful admin-controlled pet marketplace capable of scaling across India with thousands of breeders and customers.
+
+This project was built with [Lovable](https://lovable.dev).
+
+## Build with Lovable
+
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/439e8d75-fc62-4395-8e80-db3dc77dfcb3).
+
+- **Ship faster**: describe what you want to build and Lovable handles the code.
+- **Stay in sync**: every change made in Lovable is committed straight to this repository.
+- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+
+## Development
+
+Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+git clone <this-repository-url>
+cd <repository-name>
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
