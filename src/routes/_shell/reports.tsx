@@ -104,7 +104,7 @@ function ReportsPage() {
             variant="outline"
             className="gap-2"
             disabled={reports.length === 0}
-            onClick={() => downloadCsv("reports.csv", reports)}
+            onClick={() => downloadCsv("reports.csv", reports.map((report) => ({ ...report })))}
           >
             <Download className="size-4" /> Export
           </Button>
