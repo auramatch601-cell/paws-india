@@ -1,292 +1,692 @@
-# Paws India
+# Finance Guardian
 
-Create a premium, modern, scalable pet marketplace website for India focused ONLY on DOG and CAT selling.
+You are a Senior Staff Frontend Engineer, Senior UI/UX Designer, and Design System Architect.
 
-The website concept is inspired by platforms like Mr n Mrs Pet but must have a UNIQUE brand identity, cleaner UI, and a powerful admin-controlled marketplace system.
+Your task is to build ONLY the frontend of an enterprise SaaS application called **AutoAudit**.
 
-BUSINESS MODEL (VERY IMPORTANT)
+IMPORTANT RULES
 
-This platform works as a B2B + B2C marketplace:
+• Build ONLY frontend.
 
-1. Breeders/Sellers from all India submit dogs or cats with their OFFER PRICE (B2B price).
+• DO NOT create backend.
 
-2. This seller price is visible ONLY to Admin.
+• DO NOT create API endpoints.
 
-3. Admin can ACCEPT or REJECT the offer.
+• DO NOT create Express, Node, NestJS, Django, Laravel or any server.
 
-4. Only admin-approved pets appear publicly.
+• DO NOT create database schemas.
 
-5. Admin sets final selling price (markup controlled by admin).
+• DO NOT use MongoDB, PostgreSQL, MySQL, Prisma, Firebase, Supabase or any database.
 
-6. Customers only see admin selling price.
+• DO NOT implement authentication logic.
 
-7. Buyers and sellers must NEVER contact each other directly.
+• DO NOT generate JWT code.
 
-8. Website owner acts as the main seller.
+• DO NOT generate Refresh Token code.
 
-GOAL:
+• DO NOT implement MFA.
 
-Build India's trusted pet selling marketplace where breeders list pets and customers buy easily based on location and breed.
+• DO NOT implement RBAC logic.
 
---------------------------------------------------
+• Only create frontend UI that visually represents these features.
 
-UI LAYOUT (IMPORTANT – FOLLOW STRUCTURE)
+• Use mock JSON, dummy data, placeholder services, fake authentication context, and static state.
 
-TOP SEARCH BAR
+• Simulate loading states, success states, empty states and error states using local mock data.
 
-- Dropdown: Pet Type (Dogs / Cats)
+The output should be production-quality frontend architecture.
 
-- Dropdown: State
+====================================================
 
-- Dropdown: City
+PROJECT
 
-- Purple Search Button
+AutoAudit
 
-- Rounded modern inputs with soft shadow
+An AI-powered Financial Leakage Detection Platform that integrates with ERP and Accounting software to discover hidden financial losses such as:
 
-PAGE STRUCTURE:
+• Duplicate Payments
 
-Two-column layout.
+• Duplicate Invoices
 
-LEFT SIDEBAR (Sticky)
+• Vendor Overcharging
 
-- Add Pet (+ icon)
+• Invoice Errors
 
-- For Sale
+• Tax Errors
 
-- For Adoption
+• Contract Violations
 
-- For Mating
+• Subscription Waste
 
-FILTER SECTION:
+• Fraud Indicators
 
-Title: Filter
+• Spend Anomalies
 
-"I'm Looking"
+• Financial Leakage
 
-- For Buying
+Existing ERP systems only record financial transactions.
 
-- For Adoption
+AutoAudit intelligently analyzes them and provides AI-powered explanations, alerts, dashboards and recovery recommendations.
 
-Filters:
+====================================================
 
-- Breed
+TARGET USERS
 
-- Price Range
+• Admin
 
-- Age
+• CFO
 
-- Gender
+• Finance Manager
 
-- Location
+• Accountant
 
-MAIN CONTENT AREA
+• Procurement Manager
 
-Breadcrumb:
+• Auditor
 
-Home > Dogs for Sale
+• Viewer
 
-Heading:
+Design every screen according to enterprise software standards.
 
-Dogs For Sale
+====================================================
 
-Show result count + short description.
+TECH STACK
 
-PET LIST GRID:
+Use
 
-3 cards per row.
+Next.js (App Router)
 
-Each Pet Card contains:
+or
 
-- Pet Image
+React + Vite
 
-- "Pet Quality" badge (top-right)
+TypeScript
 
-- Breed Name
+TailwindCSS
 
-- Location
+shadcn/ui
 
-- Age
+Framer Motion
 
-- Vaccination Status
+Lucide Icons
 
-- Price
+Recharts
 
-- Short description
+React Hook Form
 
-- View Details button
+Zod (frontend validation only)
 
-Card Design:
+TanStack Table
 
-- Rounded corners
+React Query (mock only)
 
-- Soft shadow
-
-- Hover animation
-
-- Premium marketplace look
-
-FLOATING BUTTON:
-
-Add WhatsApp / Call button fixed on right side.
-
---------------------------------------------------
-
-SELLER (BREEDER) SYSTEM
-
-Seller Dashboard:
-
-- Register/Login
-
-- Submit dog or cat
-
-- Upload images & video
-
-- Enter breed
-
-- Enter age & gender
-
-- Enter vaccination info
-
-- Enter LOCATION (City/State)
-
-- Enter OFFER PRICE (Private to Admin)
-
-Status:
-
-Pending / Accepted / Rejected
-
---------------------------------------------------
-
-ADMIN PANEL (FULL CONTROL)
-
-Admin can:
-
-- Approve or reject listings
-
-- Edit pet details
-
-- Change selling price
-
-- Control markup price
-
-- Manage sellers
-
-- Manage customers
-
-- Track pets city-wise
-
-- View offers
-
-- Manage orders
-
---------------------------------------------------
-
-CUSTOMER EXPERIENCE
-
-Customers can:
-
-- Search pets by city
-
-- Filter by breed
-
-- Browse dogs & cats separately
-
-- View pet details
-
-- Simple enquiry or buy process
-
-- Mobile-friendly fast experience
-
---------------------------------------------------
-
-EXTRA FEATURES
-
-- Location-based pet listing (All India)
-
-- Verified breeder badge
-
-- Pet care blog
-
-- Pet health guarantee section
-
-- Delivery across India info
-
-- SEO optimized pages
-
-- Fast loading design
-
---------------------------------------------------
+====================================================
 
 DESIGN STYLE
 
-- Clean modern UI
+Modern enterprise SaaS
 
-- White & light grey background
+Premium
 
-- Purple accent color
+Minimal
 
-- Large pet images
+Professional
 
-- Premium typography
+Financial Technology
 
-- Smooth animations
+AI Dashboard
 
-- Mobile-first responsive design
+Glassmorphism (light usage)
 
-- Trust-focused layout
+Soft Shadows
 
---------------------------------------------------
+Rounded XL Cards
 
-PAGES REQUIRED
+Professional spacing
 
-Home
+8px design system
 
-Dogs Listing
+Accessible typography
 
-Cats Listing
+Excellent UX
 
-Pet Details
+Responsive
 
-Seller Registration
+Dark Mode
 
-Seller Dashboard
+Light Mode
 
-Admin Dashboard
+Animated transitions
 
-Checkout / Enquiry
+Micro interactions
 
-About Us
+Smooth loading skeletons
 
-Contact
+Beautiful empty states
 
-Pet Care Blog
+Professional tables
 
---------------------------------------------------
+Premium charts
 
-TECH SUGGESTION
+Modern navigation
 
-Frontend: React or Next.js
+High information density
 
-Backend: Node.js
+====================================================
 
-Database: MongoDB
+COLOR PALETTE
 
-Cloud Image Storage
+Primary
 
-SEO optimized structure
+#4F46E5
 
---------------------------------------------------
+Secondary
 
-FINAL GOAL
+#7C3AED
 
-Create a simple user experience but powerful admin-controlled pet marketplace capable of scaling across India with thousands of breeders and customers.
+Accent
+
+#06B6D4
+
+Success
+
+#22C55E
+
+Warning
+
+#F59E0B
+
+Danger
+
+#EF4444
+
+Background
+
+#F8FAFC
+
+Dark Background
+
+#0F172A
+
+Cards
+
+White / Slate-900
+
+====================================================
+
+TYPOGRAPHY
+
+Inter
+
+Large headings
+
+Readable tables
+
+Professional dashboards
+
+====================================================
+
+APPLICATION LAYOUT
+
+Create a scalable SaaS layout.
+
+Desktop Sidebar
+
+Top Navigation
+
+Breadcrumbs
+
+Search
+
+Notifications
+
+Profile Menu
+
+Workspace Switcher
+
+Theme Toggle
+
+Responsive Mobile Navigation
+
+====================================================
+
+SIDEBAR
+
+Dashboard
+
+AI Insights
+
+Financial Leaks
+
+Transactions
+
+Invoices
+
+Payments
+
+Contracts
+
+Vendors
+
+Recovery Center
+
+Reports
+
+Analytics
+
+Notifications
+
+Users
+
+Roles & Permissions
+
+Integrations
+
+Settings
+
+====================================================
+
+PHASE 3
+
+Authentication UI ONLY
+
+Build frontend pages for
+
+Login
+
+Register
+
+Forgot Password
+
+Reset Password
+
+Verify Email
+
+OTP Verification
+
+MFA Verification
+
+Choose MFA Method
+
+Session Expired
+
+Access Denied
+
+Unauthorized
+
+Role Selection
+
+User Profile
+
+Account Security
+
+Sessions
+
+Password Changed
+
+Loading Authentication
+
+No backend.
+
+Only beautiful UI.
+
+====================================================
+
+Authentication Screens
+
+Login
+
+Email
+
+Password
+
+Remember Me
+
+Forgot Password
+
+Social Login placeholders
+
+Company Logo
+
+Illustration
+
+Background Pattern
+
+Animated Hero Section
+
+Register
+
+Full Name
+
+Company Name
+
+Organization
+
+Email
+
+Phone
+
+Password
+
+Confirm Password
+
+Terms Checkbox
+
+Create Account Button
+
+OTP Verification
+
+6-digit OTP boxes
+
+Resend timer
+
+Verify button
+
+Animated success
+
+Forgot Password
+
+Email input
+
+Send Reset Link
+
+Success Screen
+
+Reset Password
+
+New Password
+
+Confirm Password
+
+Password Strength Meter
+
+Success Screen
+
+MFA
+
+Authenticator App
+
+SMS
+
+Email
+
+Recovery Codes
+
+QR Code placeholder
+
+Verification Code Input
+
+Success Screen
+
+====================================================
+
+Role UI
+
+Create beautiful role badges
+
+Admin
+
+CFO
+
+Finance Manager
+
+Accountant
+
+Procurement Manager
+
+Auditor
+
+Viewer
+
+Each role should have
+
+Icon
+
+Color
+
+Description
+
+Permissions Preview
+
+This is UI only.
+
+====================================================
+
+Permissions UI
+
+Create permission matrix table
+
+View
+
+Create
+
+Edit
+
+Delete
+
+Approve
+
+Recover
+
+Manage Users
+
+Manage Roles
+
+Export
+
+Configure
+
+Use checkboxes.
+
+No backend.
+
+====================================================
+
+Dashboard Preview After Login
+
+Financial Health Score
+
+Potential Savings
+
+Money Recovered
+
+AI Risk Score
+
+Active Alerts
+
+Fraud Alerts
+
+Leak Detection Summary
+
+Charts
+
+KPIs
+
+Recent Activity
+
+Notifications
+
+AI Recommendations
+
+====================================================
+
+Animations
+
+Use Framer Motion.
+
+Animated page transitions
+
+Hover cards
+
+Animated charts
+
+Loading shimmer
+
+Skeletons
+
+Fade
+
+Scale
+
+Slide
+
+====================================================
+
+Components
+
+Create reusable components.
+
+Button
+
+Input
+
+Card
+
+Modal
+
+Drawer
+
+Dialog
+
+Tabs
+
+Table
+
+Badge
+
+Avatar
+
+Dropdown
+
+Tooltip
+
+Toast
+
+Alert
+
+Pagination
+
+Search
+
+Breadcrumb
+
+Sidebar
+
+Navbar
+
+Stat Card
+
+Chart Card
+
+Metric Card
+
+AI Insight Card
+
+Alert Card
+
+====================================================
+
+Use Mock Data
+
+Create realistic mock JSON.
+
+Mock Users
+
+Mock Alerts
+
+Mock Financial Leaks
+
+Mock Transactions
+
+Mock Vendors
+
+Mock Contracts
+
+Mock KPIs
+
+Mock AI Explanations
+
+====================================================
+
+Folder Structure
+
+Use scalable enterprise architecture.
+
+app/
+
+components/
+
+features/
+
+hooks/
+
+lib/
+
+constants/
+
+types/
+
+data/
+
+layouts/
+
+providers/
+
+styles/
+
+public/
+
+====================================================
+
+Coding Standards
+
+Use reusable components.
+
+No duplicated code.
+
+Proper TypeScript.
+
+Clean folder structure.
+
+Proper naming.
+
+Responsive.
+
+Accessible.
+
+Maintainable.
+
+Enterprise-grade.
+
+====================================================
+
+OUTPUT REQUIREMENTS
+
+Whenever I request a page or feature:
+
+1. Generate ONLY frontend code.
+
+2. Never generate backend.
+
+3. Never generate database code.
+
+4. Never create API routes.
+
+5. Use mock data only.
+
+6. Make the UI look like a premium enterprise SaaS product comparable to Stripe, Linear, Vercel, Notion, Ramp, or Microsoft.
+
+7. Ensure every page is fully responsive, polished, and production-ready.
+
+8. Focus on exceptional UX, accessibility, and reusable components.
 
 This project was built with [Lovable](https://lovable.dev).
 
+**Live app**: https://finance-leak-finder.lovable.app
+
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/439e8d75-fc62-4395-8e80-db3dc77dfcb3).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/b97629c6-a067-4071-8634-58a388fa6a2e).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.
