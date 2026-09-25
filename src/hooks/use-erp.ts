@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { getErpFinancials, getErpOverview } from "@/lib/erp.functions";
+import { getErpFinancials, getErpOverview, runAiLeakageAnalysis } from "@/lib/erp.functions";
 
 /** Real imported invoices, payments and vendors for the signed-in user. */
 export function useErpFinancials() {
@@ -19,5 +19,15 @@ export function useErpOverview() {
     queryKey: ["erp", "overview"],
     queryFn: () => fetchOverview(),
     staleTime: 30_000,
+  });
+}
+
+export function useAiLeakageAnalysis() {
+  const runAnalysis = useServerFn(runAiLeakageAnalysis);
+  return useQuery({
+    queryKey: ["erp", "ai-leakage-analysis"],
+    queryFn: () => runAnalysis(),
+    enabled: false,
+    retry: false,
   });
 }
