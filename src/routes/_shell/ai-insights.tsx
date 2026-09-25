@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "motion/react";
-import { Brain, RefreshCw, Sparkles } from "lucide-react";
+import { AlertTriangle, Brain, CheckCircle2, RefreshCw, Sparkles, WandSparkles } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { ToneBadge } from "@/components/common/tone-badge";
 import { NoImportedData } from "@/components/common/no-data";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ChartCard, RecoveryLineChart } from "@/components/dashboard/charts";
-import { useErpOverview } from "@/hooks/use-erp";
+import { useAiLeakageAnalysis, useErpOverview } from "@/hooks/use-erp";
 import { currencyIn, percent } from "@/lib/format";
 
 export const Route = createFileRoute("/_shell/ai-insights")({
@@ -21,6 +22,8 @@ export const Route = createFileRoute("/_shell/ai-insights")({
       },
       { property: "og:title", content: "AI Insights — AutoAudit" },
       { property: "og:description", content: "Explainable findings across your imported financial records." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AiInsightsPage,
@@ -28,9 +31,14 @@ export const Route = createFileRoute("/_shell/ai-insights")({
 
 function AiInsightsPage() {
   const { data, isLoading, isFetching, refetch } = useErpOverview();
+  const aiAnalysis = useAiLeakageAnalysis();
   const code = data?.currencyCode;
   const insights = data?.insights ?? [];
   const leaks = data?.leaks ?? [];
+
+  const runAiAnalysis = () => {
+    void aiAnalysis.refetch();
+  };
 
   if (!isLoading && !data?.connected) {
     return (
@@ -48,11 +56,88 @@ function AiInsightsPage() {
         description="Every finding is explained in plain language with the records the analysis used."
         crumbs={[{ label: "AI Insights" }]}
         actions={
-          <Button className="gap-2" disabled={isFetching} onClick={() => void refetch()}>
-            <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} /> Re-analyse
-          </Button>
+          <>
+            <Button variant="outline" className="gap-2" disabled={aiAnalysis.isFetching || !data?.connected} onClick={runAiAnalysis}>
+              <WandSparkles className={`size-4 ${aiAnalysis.isFetching ? "animate-pulse" : ""}`} />
+              {aiAnalysis.isFetching ? "AI scan running" : "Run AI scan"}
+            </Button>
+            <Button className="gap-2" disabled={isFetching} onClick={() => void refetch()}>
+              <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} /> Re-analyse
+            </Button>
+          </>
         }
       />
+
+      {aiAnalysis.error && (
+        <Alert variant="destructive" className="mt-5">
+          <AlertTriangle className="size-4" />
+          <AlertTitle>AI analysis could not run</AlertTitle>
+          <AlertDescription>{aiAnalysis.error.message}</AlertDescription>
+        </Alert>
+      )}
+
+      {aiAnalysis.data && (
+        <section className="mt-5 space-y-4" aria-label="AI leakage analysis">
+          <div className="surface-card overflow-hidden border-primary/20">
+            <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <ToneBadge tone="violet" dot>AI control review</ToneBadge>
+                  <ToneBadge tone={aiAnalysis.data.riskLevel === "critical" || aiAnalysis.data.riskLevel === "high" ? "danger" : aiAnalysis.data.riskLevel === "moderate" ? "warning" : "success"}>
+                    {aiAnalysis.data.riskLevel} risk
+                  </ToneBadge>
+                </div>
+                <h2 className="mt-3 text-lg font-semibold">AI leakage assessment</h2>
+                <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">{aiAnalysis.data.summary}</p>
+              </div>
+              <div className="rounded-xl border border-primary/15 bg-primary/5 px-5 py-4 lg:min-w-48">
+                <p className="text-xs text-muted-foreground">Estimated exposure</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{currencyIn(aiAnalysis.data.estimatedExposure, aiAnalysis.data.currency)}</p>
+              </div>
+            </div>
+            {(aiAnalysis.data.recommendations.length > 0 || aiAnalysis.data.limitations.length > 0) && (
+              <div className="grid gap-4 border-t border-border/70 bg-muted/25 p-5 lg:grid-cols-2">
+                {aiAnalysis.data.recommendations.length > 0 && (
+                  <div>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold"><CheckCircle2 className="size-4 text-success" /> Recommended controls</h3>
+                    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                      {aiAnalysis.data.recommendations.map((item) => <li key={item} className="flex gap-2"><span className="text-success">•</span><span>{item}</span></li>)}
+                    </ul>
+                  </div>
+                )}
+                {aiAnalysis.data.limitations.length > 0 && (
+                  <div>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold"><AlertTriangle className="size-4 text-warning" /> Review notes</h3>
+                    <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                      {aiAnalysis.data.limitations.map((item) => <li key={item} className="flex gap-2"><span className="text-warning">•</span><span>{item}</span></li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {aiAnalysis.data.findings.length > 0 && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              {aiAnalysis.data.findings.map((finding, i) => (
+                <motion.article key={finding.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="surface-card p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2"><ToneBadge tone="muted" size="sm">{finding.category}</ToneBadge><ToneBadge tone={finding.severity === "critical" || finding.severity === "high" ? "danger" : finding.severity === "medium" ? "warning" : "muted"} size="sm">{finding.severity}</ToneBadge></div>
+                      <h3 className="mt-3 text-sm font-semibold">{finding.title}</h3>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums">{currencyIn(finding.amount, finding.currency)}</span>
+                  </div>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{finding.evidence}</p>
+                  <div className="mt-4 border-t border-border/70 pt-3 text-sm"><span className="font-medium">Next control: </span><span className="text-muted-foreground">{finding.recommendation}</span></div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground"><span>AI confidence</span><span>{percent(finding.confidence)}</span></div>
+                  <Progress value={finding.confidence * 100} className="mt-1.5 h-1.5" />
+                </motion.article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">

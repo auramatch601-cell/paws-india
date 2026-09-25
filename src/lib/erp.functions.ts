@@ -12,6 +12,7 @@ import {
 } from "@/lib/erp/service.server";
 import { loadFinancials, loadOverview } from "@/lib/erp/data.server";
 import { loadActivity } from "@/lib/erp/activity.server";
+import { analyzeLeakageFor } from "@/lib/erp/ai-analysis.server";
 
 
 export const getErpStatus = createServerFn({ method: "GET" })
@@ -46,6 +47,13 @@ export const getErpFinancials = createServerFn({ method: "GET" })
 export const getErpOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => loadOverview(context.userId));
+
+export const runAiLeakageAnalysis = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const runId = getRequest().headers.get("X-Lovable-AIG-Run-ID") ?? undefined;
+    return analyzeLeakageFor(context.userId, runId);
+  });
 
 export const getErpActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
