@@ -150,6 +150,16 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           </Link>
         </Button>
       </div>
+
+      <div className="pt-2 px-1 text-[11px] text-muted-foreground flex flex-wrap gap-x-2 gap-y-1">
+        <Link to="/privacy-policy" onClick={onNavigate} className="hover:text-foreground underline">Privacy</Link>
+        <span>•</span>
+        <Link to="/terms-and-conditions" onClick={onNavigate} className="hover:text-foreground underline">Terms</Link>
+        <span>•</span>
+        <Link to="/cookie-policy" onClick={onNavigate} className="hover:text-foreground underline">Cookies</Link>
+        <span>•</span>
+        <Link to="/refund-policy" onClick={onNavigate} className="hover:text-foreground underline">Refunds</Link>
+      </div>
     </div>
   );
 }

@@ -65,6 +65,25 @@ function RegisterPage() {
         <div className="space-y-1.5"><Label htmlFor="cemail">Work email</Label><Input id="cemail" type="email" value={form.email} onChange={set("email")} required /></div>
         <div className="space-y-1.5"><Label htmlFor="org">Organisation</Label><Input id="org" value={form.org} onChange={set("org")} required /></div>
         <div className="space-y-1.5"><Label htmlFor="pw">Password</Label><Input id="pw" type="password" autoComplete="new-password" minLength={8} value={form.password} onChange={set("password")} required /></div>
+        <div className="flex items-start gap-2 pt-1">
+          <input
+            id="terms-consent"
+            type="checkbox"
+            required
+            className="mt-1 size-4 rounded border-border text-primary focus:ring-primary"
+          />
+          <Label htmlFor="terms-consent" className="text-xs leading-normal font-normal text-muted-foreground">
+            I agree to the{" "}
+            <Link to="/terms-and-conditions" target="_blank" className="text-primary underline">
+              Terms and Conditions
+            </Link>{" "}
+            and consent to the processing of corporate and account data as described in the{" "}
+            <Link to="/privacy-policy" target="_blank" className="text-primary underline">
+              Privacy Policy
+            </Link>{" "}
+            under the DPDP Act, 2023.
+          </Label>
+        </div>
         <Button type="submit" className="w-full" disabled={loading}>{loading ? "Creating…" : "Create account"}</Button>
       </form>
     </AuthLayout>

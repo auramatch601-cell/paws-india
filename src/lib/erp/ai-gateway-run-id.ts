@@ -17,6 +17,6 @@ export function createLovableAiGatewayRunIdFetch(initialRunId?: string) {
   };
 }
 
-export function getLovableAiGatewayRunId(request: Request) {
-  return request.headers.get(LOVABLE_AIG_RUN_ID_HEADER)?.trim() || undefined;
+export function getLovableAiGatewayRunId(request?: Request) {
+  return request?.headers?.get?.(LOVABLE_AIG_RUN_ID_HEADER)?.trim() || undefined;
 }

@@ -36,18 +36,18 @@ export function AuthLayout({
             </p>
             <dl className="mt-10 grid grid-cols-2 gap-6 max-w-md">
               <div>
-                <dt className="text-xs opacity-80">Recovered for customers</dt>
-                <dd className="mt-1 text-2xl font-semibold">$412M+</dd>
+                <dt className="text-xs opacity-80">Audit Coverage</dt>
+                <dd className="mt-1 text-2xl font-semibold">100% Invoices</dd>
               </div>
               <div>
-                <dt className="text-xs opacity-80">Average leakage found</dt>
-                <dd className="mt-1 text-2xl font-semibold">1.8% of spend</dd>
+                <dt className="text-xs opacity-80">Algorithm Accuracy</dt>
+                <dd className="mt-1 text-2xl font-semibold">Deterministic</dd>
               </div>
             </dl>
           </motion.div>
           <div className="flex items-center gap-4 text-xs opacity-85">
-            <span className="inline-flex items-center gap-1.5"><Sparkles className="size-3.5" /> SOC 2 Type II</span>
-            <span className="inline-flex items-center gap-1.5"><TrendingUp className="size-3.5" /> ISO 27001</span>
+            <span className="inline-flex items-center gap-1.5"><Sparkles className="size-3.5" /> DPDP Act Aligned</span>
+            <span className="inline-flex items-center gap-1.5"><TrendingUp className="size-3.5" /> AES-256 Encryption</span>
           </div>
         </div>
       </div>
@@ -70,6 +70,13 @@ export function AuthLayout({
           {subtitle && <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>}
           <div className="mt-7">{children}</div>
           {footer && <div className="mt-6 text-center text-sm text-muted-foreground">{footer}</div>}
+          <div className="mt-6 pt-4 border-t border-border/60 text-center text-xs text-muted-foreground space-x-3">
+            <Link to="/privacy-policy" className="hover:text-foreground underline">Privacy Policy</Link>
+            <span>•</span>
+            <Link to="/terms-and-conditions" className="hover:text-foreground underline">Terms of Service</Link>
+            <span>•</span>
+            <Link to="/cookie-policy" className="hover:text-foreground underline">Cookie Policy</Link>
+          </div>
         </motion.div>
       </div>
     </div>

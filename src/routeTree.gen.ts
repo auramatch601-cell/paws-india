@@ -10,10 +10,14 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShellRouteImport } from './routes/_shell'
+import { Route as CookiePolicyRouteImport } from './routes/cookie-policy'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MfaRouteImport } from './routes/mfa'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
+import { Route as RefundPolicyRouteImport } from './routes/refund-policy'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as ShellAiInsightsRouteImport } from './routes/_shell/ai-insights'
@@ -40,6 +44,11 @@ const ShellRoute = ShellRouteImport.update({
   id: '/_shell',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CookiePolicyRoute = CookiePolicyRouteImport.update({
+  id: '/cookie-policy',
+  path: '/cookie-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
@@ -55,9 +64,24 @@ const MfaRoute = MfaRouteImport.update({
   path: '/mfa',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RefundPolicyRoute = RefundPolicyRouteImport.update({
+  id: '/refund-policy',
+  path: '/refund-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
+  id: '/terms-and-conditions',
+  path: '/terms-and-conditions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
@@ -168,10 +192,14 @@ const ApiPublicErpIngestRoute = ApiPublicErpIngestRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof ShellIndexRoute
+  '/cookie-policy': typeof CookiePolicyRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/register': typeof RegisterRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/ai-insights': typeof ShellAiInsightsRoute
   '/analytics': typeof ShellAnalyticsRoute
@@ -194,10 +222,14 @@ export interface FileRoutesByFullPath {
   '/api/public/erp/ingest': typeof ApiPublicErpIngestRoute
 }
 export interface FileRoutesByTo {
+  '/cookie-policy': typeof CookiePolicyRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/register': typeof RegisterRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/ai-insights': typeof ShellAiInsightsRoute
   '/analytics': typeof ShellAnalyticsRoute
@@ -223,10 +255,14 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_shell': typeof ShellRouteWithChildren
+  '/cookie-policy': typeof CookiePolicyRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/login': typeof LoginRoute
   '/mfa': typeof MfaRoute
+  '/privacy-policy': typeof PrivacyPolicyRoute
+  '/refund-policy': typeof RefundPolicyRoute
   '/register': typeof RegisterRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/verify-email': typeof VerifyEmailRoute
   '/_shell/ai-insights': typeof ShellAiInsightsRoute
   '/_shell/analytics': typeof ShellAnalyticsRoute
@@ -253,10 +289,14 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cookie-policy'
     | '/forgot-password'
     | '/login'
     | '/mfa'
+    | '/privacy-policy'
+    | '/refund-policy'
     | '/register'
+    | '/terms-and-conditions'
     | '/verify-email'
     | '/ai-insights'
     | '/analytics'
@@ -279,10 +319,14 @@ export interface FileRouteTypes {
     | '/api/public/erp/ingest'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/cookie-policy'
     | '/forgot-password'
     | '/login'
     | '/mfa'
+    | '/privacy-policy'
+    | '/refund-policy'
     | '/register'
+    | '/terms-and-conditions'
     | '/verify-email'
     | '/ai-insights'
     | '/analytics'
@@ -307,10 +351,14 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_shell'
+    | '/cookie-policy'
     | '/forgot-password'
     | '/login'
     | '/mfa'
+    | '/privacy-policy'
+    | '/refund-policy'
     | '/register'
+    | '/terms-and-conditions'
     | '/verify-email'
     | '/_shell/ai-insights'
     | '/_shell/analytics'
@@ -336,10 +384,14 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   ShellRoute: typeof ShellRouteWithChildren
+  CookiePolicyRoute: typeof CookiePolicyRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   LoginRoute: typeof LoginRoute
   MfaRoute: typeof MfaRoute
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
+  RefundPolicyRoute: typeof RefundPolicyRoute
   RegisterRoute: typeof RegisterRoute
+  TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiPublicErpCallbackRoute: typeof ApiPublicErpCallbackRoute
   ApiPublicErpIngestRoute: typeof ApiPublicErpIngestRoute
@@ -352,6 +404,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof ShellRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookie-policy': {
+      id: '/cookie-policy'
+      path: '/cookie-policy'
+      fullPath: '/cookie-policy'
+      preLoaderRoute: typeof CookiePolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -375,11 +434,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MfaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/refund-policy': {
+      id: '/refund-policy'
+      path: '/refund-policy'
+      fullPath: '/refund-policy'
+      preLoaderRoute: typeof RefundPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-and-conditions': {
+      id: '/terms-and-conditions'
+      path: '/terms-and-conditions'
+      fullPath: '/terms-and-conditions'
+      preLoaderRoute: typeof TermsAndConditionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verify-email': {
@@ -578,10 +658,14 @@ const ShellRouteWithChildren = ShellRoute._addFileChildren(ShellRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   ShellRoute: ShellRouteWithChildren,
+  CookiePolicyRoute: CookiePolicyRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   LoginRoute: LoginRoute,
   MfaRoute: MfaRoute,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
+  RefundPolicyRoute: RefundPolicyRoute,
   RegisterRoute: RegisterRoute,
+  TermsAndConditionsRoute: TermsAndConditionsRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiPublicErpCallbackRoute: ApiPublicErpCallbackRoute,
   ApiPublicErpIngestRoute: ApiPublicErpIngestRoute,
