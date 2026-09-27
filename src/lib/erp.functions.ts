@@ -50,10 +50,7 @@ export const getErpOverview = createServerFn({ method: "GET" })
 
 export const runAiLeakageAnalysis = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const runId = getRequest().headers.get("X-Lovable-AIG-Run-ID") ?? undefined;
-    return analyzeLeakageFor(context.userId, runId);
-  });
+  .handler(async ({ context }) => analyzeLeakageFor(context.userId, getRequest()));
 
 export const getErpActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
