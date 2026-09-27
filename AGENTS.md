@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- AI leakage analysis runs in an authenticated TanStack server function, uses the server-only Lovable AI Responses SDK, and returns a validated transient result; this keeps financial records and AI credentials out of the browser.
