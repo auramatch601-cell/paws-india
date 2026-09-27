@@ -59,7 +59,7 @@ export async function beginOAuth(userId: string, provider: string, origin: strin
   }
   const state = randomBytes(24).toString("hex");
   const db = await admin();
-  const safeOrigin = origin && origin !== "null" && origin !== "undefined" ? origin : "http://localhost:8081";
+  const safeOrigin = origin && origin !== "null" && origin !== "undefined" ? origin : "https://indo-pet-hub.lovable.app";
   const { error } = await db.from("erp_oauth_states").insert({
     state,
     user_id: userId,
@@ -89,7 +89,7 @@ export async function completeOAuth(params: {
 
   const provider = stateRow.provider as string;
   const userId = stateRow.user_id as string;
-  const effectiveOrigin = params.origin || (stateRow.origin as string) || "http://localhost:8081";
+  const effectiveOrigin = params.origin || (stateRow.origin as string) || "https://indo-pet-hub.lovable.app
   const { exchangeCode } = await import("./oauth.server");
   let tokens: StoredTokens = await exchangeCode(provider, params.code, effectiveOrigin, params.accountsServer);
   if (params.realmId) tokens = { ...tokens, realm_id: params.realmId };

@@ -28,7 +28,7 @@ export const startErpConnect = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: { provider: string }) => input)
   .handler(async ({ data, context }) => {
-    let origin = "http://localhost:8081";
+    let origin = "https://indo-pet-hub.lovable.app";
     try {
       const req = getRequest();
       if (req?.url) {
