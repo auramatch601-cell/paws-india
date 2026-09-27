@@ -1,6 +1,8 @@
 // Server-only reads of the user's ingested real ERP data, plus leakage analysis
 // computed from those real records.
 
+import { computeLeakFingerprint } from "@/lib/erp/fingerprint.server";
+
 type Cell = string | number | boolean | null;
 export type Row = Record<string, Cell>;
 
@@ -56,6 +58,7 @@ export interface LeakEvidence {
 
 export interface DetectedLeak {
   id: string;
+  fingerprint: string;
   type: string;
   title: string;
   vendor: string;
@@ -129,26 +132,13 @@ function money(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export async function loadOverview(userId: string): Promise<OverviewPayload> {
-  const { invoices, payments, vendors, connected } = await loadFinancials(userId);
-  const db = await admin();
-  const [runsRes, connRes] = await Promise.all([
-    db
-      .from("erp_sync_runs")
-      .select("id, connection_id, status, started_at")
-      .eq("user_id", userId)
-      .order("started_at", { ascending: false })
-      .limit(50),
-    db.from("erp_connections").select("id, provider").eq("user_id", userId),
-  ]);
-  const providerById = new Map((connRes.data ?? []).map((c) => [c.id as string, c.provider as string]));
-  const syncRuns: SyncRunOption[] = (runsRes.data ?? []).map((r) => ({
-    id: r.id as string,
-    connectionId: r.connection_id as string,
-    provider: providerById.get(r.connection_id as string) ?? "unknown",
-    status: r.status as string,
-    startedAt: r.started_at as string,
-  }));
+export function detectLeaksFromFinancials(params: {
+  invoices: Row[];
+  payments: Row[];
+  vendors: Row[];
+  syncRuns?: SyncRunOption[];
+}): DetectedLeak[] {
+  const { invoices, payments, vendors, syncRuns = [] } = params;
 
   const vendorByName = new Map<string, Row>();
   for (const v of vendors) vendorByName.set(String(v["name"] ?? "").toLowerCase(), v);
@@ -176,7 +166,208 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
     return { invoices: inv, payments: pay, vendors: ven };
   };
 
+  const leaks: DetectedLeak[] = [];
 
+  // 1. Duplicate invoices: same vendor + same amount + same date.
+  const dupKey = new Map<string, Row[]>();
+  for (const i of invoices) {
+    const key = `${i["vendor_name"]}|${money(i["amount"]).toFixed(2)}|${i["issue_date"]}`;
+    dupKey.set(key, [...(dupKey.get(key) ?? []), i]);
+  }
+  for (const [key, group] of dupKey) {
+    if (group.length < 2) continue;
+    const first = group[0]!;
+    const evidence = evidenceFor(group, []);
+    const { connectionId, syncRunId } = attribute(group);
+    const amount = money(first["amount"]) * (group.length - 1);
+    const date = (first["issue_date"] as string | null) ?? null;
+    const vendor = String(first["vendor_name"] ?? "Unknown");
+    const currency = String(first["currency"] ?? "");
+    const fingerprint = computeLeakFingerprint({
+      type: "Duplicate invoice",
+      connectionId,
+      vendor,
+      amount,
+      date,
+      invoices: group,
+      payments: [],
+    });
+
+    leaks.push({
+      id: `dup-${key}`,
+      fingerprint,
+      type: "Duplicate invoice",
+      title: `${group.length} identical invoices from ${first["vendor_name"] ?? "vendor"}`,
+      vendor,
+      amount,
+      currency,
+      severity: "critical",
+      detail: `Invoices ${group.map((g) => g["invoice_number"] ?? g["external_id"]).join(", ")} share the same vendor, amount and date.`,
+      date,
+      connectionId,
+      syncRunId,
+      evidence,
+    });
+  }
+
+  // 2. Overpayments: paid more than the invoice total.
+  const invoiceByExternal = new Map(invoices.map((i) => [String(i["external_id"]), i]));
+  const paidByInvoice = new Map<string, number>();
+  for (const p of payments) {
+    const ref = String(p["invoice_external_id"] ?? "");
+    if (!ref) continue;
+    paidByInvoice.set(ref, (paidByInvoice.get(ref) ?? 0) + money(p["amount"]));
+  }
+  for (const [ref, paid] of paidByInvoice) {
+    const inv = invoiceByExternal.get(ref);
+    if (!inv) continue;
+    const total = money(inv["amount"]);
+    if (total > 0 && paid - total > 0.5) {
+      const matchedPayments = payments.filter((p) => String(p["invoice_external_id"] ?? "") === ref);
+      const evidence = evidenceFor([inv], matchedPayments);
+      const { connectionId, syncRunId } = attribute([inv]);
+      const amount = paid - total;
+      const date = (inv["issue_date"] as string | null) ?? null;
+      const vendor = String(inv["vendor_name"] ?? "Unknown");
+      const currency = String(inv["currency"] ?? "");
+      const fingerprint = computeLeakFingerprint({
+        type: "Overpayment",
+        connectionId,
+        vendor,
+        amount,
+        date,
+        invoices: [inv],
+        payments: matchedPayments,
+      });
+
+      leaks.push({
+        id: `over-${ref}`,
+        fingerprint,
+        type: "Overpayment",
+        title: `Overpaid invoice ${inv["invoice_number"] ?? ref}`,
+        vendor,
+        amount,
+        currency,
+        severity: "high",
+        detail: `Payments total ${paid.toFixed(2)} against an invoice of ${total.toFixed(2)}.`,
+        date,
+        connectionId,
+        syncRunId,
+        evidence,
+      });
+    }
+  }
+
+  // 3. Duplicate payments: same vendor, amount and date.
+  const payKey = new Map<string, Row[]>();
+  for (const p of payments) {
+    const key = `${p["vendor_name"]}|${money(p["amount"]).toFixed(2)}|${p["paid_date"]}`;
+    payKey.set(key, [...(payKey.get(key) ?? []), p]);
+  }
+  for (const [key, group] of payKey) {
+    if (group.length < 2) continue;
+    const first = group[0]!;
+    const matchedInvoices = invoices.filter(
+      (i) =>
+        String(i["vendor_name"] ?? "") === String(first["vendor_name"] ?? "") &&
+        money(i["amount"]) === money(first["amount"]),
+    );
+    const evidence = evidenceFor(matchedInvoices, group);
+    const { connectionId, syncRunId } = attribute(group);
+    const amount = money(first["amount"]) * (group.length - 1);
+    const date = (first["paid_date"] as string | null) ?? null;
+    const vendor = String(first["vendor_name"] ?? "Unknown");
+    const currency = String(first["currency"] ?? "");
+    const fingerprint = computeLeakFingerprint({
+      type: "Duplicate payment",
+      connectionId,
+      vendor,
+      amount,
+      date,
+      invoices: matchedInvoices,
+      payments: group,
+    });
+
+    leaks.push({
+      id: `dpay-${key}`,
+      fingerprint,
+      type: "Duplicate payment",
+      title: `${group.length} identical payments to ${first["vendor_name"] ?? "vendor"}`,
+      vendor,
+      amount,
+      currency,
+      severity: "critical",
+      detail: `Same vendor, amount and payment date recorded ${group.length} times.`,
+      date,
+      connectionId,
+      syncRunId,
+      evidence,
+    });
+  }
+
+  // 4. Overdue unpaid invoices — cash and penalty exposure.
+  const today = new Date().toISOString().slice(0, 10);
+  for (const i of invoices) {
+    const due = String(i["due_date"] ?? "");
+    const balance = money(i["amount"]) - money(i["amount_paid"]);
+    if (due && due < today && balance > 0.5) {
+      const matchedPayments = payments.filter((p) => String(p["invoice_external_id"] ?? "") === String(i["external_id"] ?? ""));
+      const evidence = evidenceFor([i], matchedPayments);
+      const { connectionId, syncRunId } = attribute([i]);
+      const vendor = String(i["vendor_name"] ?? "Unknown");
+      const currency = String(i["currency"] ?? "");
+      const fingerprint = computeLeakFingerprint({
+        type: "Overdue liability",
+        connectionId,
+        vendor,
+        amount: balance,
+        date: due,
+        invoices: [i],
+        payments: matchedPayments,
+      });
+
+      leaks.push({
+        id: `late-${i["external_id"]}`,
+        fingerprint,
+        type: "Overdue liability",
+        title: `Invoice ${i["invoice_number"] ?? i["external_id"]} past due`,
+        vendor,
+        amount: balance,
+        currency,
+        severity: "medium",
+        detail: `Due ${due} with ${balance.toFixed(2)} still outstanding.`,
+        date: due,
+        connectionId,
+        syncRunId,
+        evidence,
+      });
+    }
+  }
+
+  leaks.sort((a, b) => b.amount - a.amount);
+  return leaks;
+}
+
+export async function loadOverview(userId: string): Promise<OverviewPayload> {
+  const { invoices, payments, vendors, connected } = await loadFinancials(userId);
+  const db = await admin();
+  const [runsRes, connRes] = await Promise.all([
+    db
+      .from("erp_sync_runs")
+      .select("id, connection_id, status, started_at")
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .limit(50),
+    db.from("erp_connections").select("id, provider").eq("user_id", userId),
+  ]);
+  const providerById = new Map((connRes.data ?? []).map((c) => [c.id as string, c.provider as string]));
+  const syncRuns: SyncRunOption[] = (runsRes.data ?? []).map((r) => ({
+    id: r.id as string,
+    connectionId: r.connection_id as string,
+    provider: providerById.get(r.connection_id as string) ?? "unknown",
+    status: r.status as string,
+    startedAt: r.started_at as string,
+  }));
 
   const spend = invoices.reduce((s, i) => s + money(i["amount"]), 0);
   const outstanding = invoices.reduce((s, i) => s + Math.max(money(i["amount"]) - money(i["amount_paid"]), 0), 0);
@@ -202,111 +393,7 @@ export async function loadOverview(userId: string): Promise<OverviewPayload> {
     .slice(0, 8)
     .map(([vendor, s]) => ({ vendor, spend: Math.round(s) }));
 
-  const leaks: DetectedLeak[] = [];
-
-  // 1. Duplicate invoices: same vendor + same amount + same date.
-  const dupKey = new Map<string, Row[]>();
-  for (const i of invoices) {
-    const key = `${i["vendor_name"]}|${money(i["amount"]).toFixed(2)}|${i["issue_date"]}`;
-    dupKey.set(key, [...(dupKey.get(key) ?? []), i]);
-  }
-  for (const [key, group] of dupKey) {
-    if (group.length < 2) continue;
-    const first = group[0]!;
-    leaks.push({
-      id: `dup-${key}`,
-      type: "Duplicate invoice",
-      title: `${group.length} identical invoices from ${first["vendor_name"] ?? "vendor"}`,
-      vendor: String(first["vendor_name"] ?? "Unknown"),
-      amount: money(first["amount"]) * (group.length - 1),
-      currency: String(first["currency"] ?? ""),
-      severity: "critical",
-      detail: `Invoices ${group.map((g) => g["invoice_number"] ?? g["external_id"]).join(", ")} share the same vendor, amount and date.`,
-      date: (first["issue_date"] as string | null) ?? null,
-      ...attribute(group),
-      evidence: evidenceFor(group, []),
-    });
-  }
-
-  // 2. Overpayments: paid more than the invoice total.
-  const invoiceByExternal = new Map(invoices.map((i) => [String(i["external_id"]), i]));
-  const paidByInvoice = new Map<string, number>();
-  for (const p of payments) {
-    const ref = String(p["invoice_external_id"] ?? "");
-    if (!ref) continue;
-    paidByInvoice.set(ref, (paidByInvoice.get(ref) ?? 0) + money(p["amount"]));
-  }
-  for (const [ref, paid] of paidByInvoice) {
-    const inv = invoiceByExternal.get(ref);
-    if (!inv) continue;
-    const total = money(inv["amount"]);
-    if (total > 0 && paid - total > 0.5) {
-      leaks.push({
-        id: `over-${ref}`,
-        type: "Overpayment",
-        title: `Overpaid invoice ${inv["invoice_number"] ?? ref}`,
-        vendor: String(inv["vendor_name"] ?? "Unknown"),
-        amount: paid - total,
-        currency: String(inv["currency"] ?? ""),
-        severity: "high",
-        detail: `Payments total ${paid.toFixed(2)} against an invoice of ${total.toFixed(2)}.`,
-        date: (inv["issue_date"] as string | null) ?? null,
-        ...attribute([inv]),
-        evidence: evidenceFor([inv], payments.filter((p) => String(p["invoice_external_id"] ?? "") === ref)),
-      });
-    }
-  }
-
-  // 3. Duplicate payments: same vendor, amount and date.
-  const payKey = new Map<string, Row[]>();
-  for (const p of payments) {
-    const key = `${p["vendor_name"]}|${money(p["amount"]).toFixed(2)}|${p["paid_date"]}`;
-    payKey.set(key, [...(payKey.get(key) ?? []), p]);
-  }
-  for (const [key, group] of payKey) {
-    if (group.length < 2) continue;
-    const first = group[0]!;
-    leaks.push({
-      id: `dpay-${key}`,
-      type: "Duplicate payment",
-      title: `${group.length} identical payments to ${first["vendor_name"] ?? "vendor"}`,
-      vendor: String(first["vendor_name"] ?? "Unknown"),
-      amount: money(first["amount"]) * (group.length - 1),
-      currency: String(first["currency"] ?? ""),
-      severity: "critical",
-      detail: `Same vendor, amount and payment date recorded ${group.length} times.`,
-      date: (first["paid_date"] as string | null) ?? null,
-      ...attribute(group),
-      evidence: evidenceFor(
-        invoices.filter((i) => String(i["vendor_name"] ?? "") === String(first["vendor_name"] ?? "") && money(i["amount"]) === money(first["amount"])),
-        group,
-      ),
-    });
-  }
-
-  // 4. Overdue unpaid invoices — cash and penalty exposure.
-  const today = new Date().toISOString().slice(0, 10);
-  for (const i of invoices) {
-    const due = String(i["due_date"] ?? "");
-    const balance = money(i["amount"]) - money(i["amount_paid"]);
-    if (due && due < today && balance > 0.5) {
-      leaks.push({
-        id: `late-${i["external_id"]}`,
-        type: "Overdue liability",
-        title: `Invoice ${i["invoice_number"] ?? i["external_id"]} past due`,
-        vendor: String(i["vendor_name"] ?? "Unknown"),
-        amount: balance,
-        currency: String(i["currency"] ?? ""),
-        severity: "medium",
-        detail: `Due ${due} with ${balance.toFixed(2)} still outstanding.`,
-        date: due,
-        ...attribute([i]),
-        evidence: evidenceFor([i], payments.filter((p) => String(p["invoice_external_id"] ?? "") === String(i["external_id"] ?? ""))),
-      });
-    }
-  }
-
-  leaks.sort((a, b) => b.amount - a.amount);
+  const leaks = detectLeaksFromFinancials({ invoices, payments, vendors, syncRuns });
   const atRisk = leaks.reduce((s, l) => s + l.amount, 0);
 
   // Most frequently used currency across the imported invoices.

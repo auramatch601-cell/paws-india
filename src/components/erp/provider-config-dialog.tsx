@@ -41,7 +41,7 @@ export function ProviderConfigDialog({ open, onOpenChange, initialProvider, onSa
   const [provider, setProvider] = useState<string | null>(initialProvider ?? null);
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-  const [dataCenter, setDataCenter] = useState("com");
+  const [dataCenter, setDataCenter] = useState("in");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function ProviderConfigDialog({ open, onOpenChange, initialProvider, onSa
       setProvider(initialProvider ?? null);
       setClientId("");
       setClientSecret("");
-      setDataCenter("com");
+      setDataCenter("in");
       setBusy(false);
     }
   }, [open, initialProvider]);

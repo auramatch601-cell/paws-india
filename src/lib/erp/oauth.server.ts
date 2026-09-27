@@ -17,6 +17,7 @@ export interface StoredTokens {
   refresh_token?: string | undefined;
   expires_at: number;
   api_domain?: string | undefined;
+  auth_server?: string | undefined;  // e.g. "https://accounts.zoho.com" — used for token refresh
   realm_id?: string | undefined;
   tenant_id?: string | undefined;
   organization_id?: string | undefined;
@@ -62,7 +63,10 @@ function buildConfig(
         clientSecret,
         authorizeUrl: `https://accounts.zoho.${dc}/oauth/v2/auth`,
         tokenUrl: `https://accounts.zoho.${dc}/oauth/v2/token`,
-        scope: "ZohoBooks.fullaccess.READ",
+        // ZohoBooks.fullaccess.all is the correct scope granting read access to
+        // organisations, bills, invoices, contacts, and payments.
+        // The non-existent scope "ZohoBooks.fullaccess.READ" produces HTTP 401 code 57.
+        scope: "ZohoBooks.fullaccess.all",
         extraAuthParams: { access_type: "offline", prompt: "consent" },
       };
     }
@@ -183,25 +187,53 @@ async function postToken(cfg: OAuthConfig, body: URLSearchParams): Promise<Recor
   });
   const text = await res.text();
   if (!res.ok) throw new Error(`Token request failed [${res.status}]: ${text}`);
-  return JSON.parse(text) as Record<string, unknown>;
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    throw new Error(`Token request returned non-JSON response: ${text.slice(0, 300)}`);
+  }
+  if (parsed["error"]) {
+    const desc = parsed["error_description"] ? `: ${parsed["error_description"]}` : "";
+    throw new Error(`OAuth token error [${parsed["error"]}]${desc}`);
+  }
+  return parsed;
 }
 
 function toStored(raw: Record<string, unknown>, previous?: StoredTokens): StoredTokens {
+  const accessToken = raw["access_token"];
+  if (typeof accessToken !== "string" || !accessToken.trim() || accessToken === "undefined") {
+    throw new Error(
+      `OAuth token response did not contain a valid access_token. Raw response: ${JSON.stringify(raw).slice(0, 300)}`,
+    );
+  }
   const expiresIn = Number(raw["expires_in"] ?? 3600);
+  const rawApiDomain = raw["api_domain"] as string | undefined;
+  const apiDomain = rawApiDomain && rawApiDomain.length > 0 ? rawApiDomain : previous?.api_domain;
   return {
-    access_token: String(raw["access_token"]),
+    access_token: accessToken.trim(),
     refresh_token: (raw["refresh_token"] as string | undefined) ?? previous?.refresh_token,
     expires_at: Date.now() + (expiresIn - 60) * 1000,
-    api_domain: (raw["api_domain"] as string | undefined) ?? previous?.api_domain,
+    api_domain: apiDomain,
+    auth_server: previous?.auth_server,   // carry forward — set explicitly after exchange
     realm_id: previous?.realm_id,
     tenant_id: previous?.tenant_id,
     organization_id: previous?.organization_id,
   };
 }
 
-export async function exchangeCode(provider: string, code: string, origin: string): Promise<StoredTokens> {
+export async function exchangeCode(
+  provider: string,
+  code: string,
+  origin: string,
+  accountsServer?: string | undefined,
+): Promise<StoredTokens> {
   const cfg = await oauthConfig(provider);
   if (!cfg) throw new Error(`${provider} is not configured`);
+  let tokenUrl = cfg.tokenUrl;
+  if (provider === "zoho_books" && accountsServer) {
+    tokenUrl = `${accountsServer.replace(/\/+$/, "")}/oauth/v2/token`;
+  }
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code,
@@ -209,20 +241,28 @@ export async function exchangeCode(provider: string, code: string, origin: strin
     client_id: cfg.clientId,
     client_secret: cfg.clientSecret,
   });
-  return toStored(await postToken(cfg, body));
+  const overriddenCfg = { ...cfg, tokenUrl };
+  return toStored(await postToken(overriddenCfg, body));
 }
 
 export async function refreshTokens(provider: string, tokens: StoredTokens): Promise<StoredTokens> {
   const cfg = await oauthConfig(provider);
   if (!cfg) throw new Error(`${provider} is not configured`);
   if (!tokens.refresh_token) throw new Error("No refresh token stored — reconnect the account");
+  // For Zoho: use the auth_server stored during OAuth if available, so refresh
+  // goes to the correct regional accounts server (e.g. accounts.zoho.in vs .com).
+  let tokenUrl = cfg.tokenUrl;
+  if (provider === "zoho_books" && tokens.auth_server) {
+    tokenUrl = `${tokens.auth_server}/oauth/v2/token`;
+  }
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: tokens.refresh_token,
     client_id: cfg.clientId,
     client_secret: cfg.clientSecret,
   });
-  return toStored(await postToken(cfg, body), tokens);
+  const overriddenCfg = { ...cfg, tokenUrl };
+  return toStored(await postToken(overriddenCfg, body), tokens);
 }
 
 export async function validTokens(provider: string, tokens: StoredTokens) {

@@ -1,8 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
 import { ChevronsUpDown, ShieldCheck, Sparkles, X } from "lucide-react";
 import { navGroups } from "@/constants/navigation";
 import { cn } from "@/lib/utils";
+import { currency } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { ToneBadge } from "@/components/common/tone-badge";
 import {
@@ -13,7 +16,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useMockAuth } from "@/providers/mock-auth-provider";
+import { useMockAuth, type WorkspaceInfo } from "@/providers/mock-auth-provider";
+import { getDurableMetrics } from "@/lib/leak.functions";
 
 export function BrandMark({ compact }: { compact?: boolean }) {
   return (
@@ -49,7 +53,7 @@ function WorkspaceSwitcher() {
       <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {workspaces.map((w) => (
+        {workspaces.map((w: WorkspaceInfo) => (
           <DropdownMenuItem key={w.id} onSelect={() => setWorkspaceId(w.id)}>
             <span className="flex-1 truncate">{w.name}</span>
             <span className="text-xs text-muted-foreground">{w.plan}</span>
@@ -67,6 +71,16 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const visibleGroups = navGroups
     .map((group) => ({ ...group, items: group.items.filter((i) => !i.permission || can(i.permission)) }))
     .filter((group) => group.items.length > 0);
+
+  const fetchMetrics = useServerFn(getDurableMetrics);
+  const { data: metrics } = useQuery({
+    queryKey: ["durable-metrics"],
+    queryFn: () => fetchMetrics(),
+    staleTime: 30_000,
+  });
+
+  const activeCount = metrics?.activeLeaksCount ?? 0;
+  const exposure = metrics?.totalExposure ?? 0;
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto px-3 pb-4">
@@ -122,14 +136,18 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
       <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/40 p-3.5">
         <div className="flex items-center gap-2">
-          <Sparkles className="size-4 text-violet" />
-          <p className="text-xs font-semibold">AI Scan running</p>
+          <Sparkles className="size-4 text-violet animate-pulse" />
+          <p className="text-xs font-semibold">AI Scan active</p>
         </div>
         <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
-          1.8M transactions analysed this cycle. 27 new leaks awaiting triage.
+          {activeCount > 0
+            ? `${activeCount} leaks awaiting triage (${currency(exposure, { currency: metrics?.currency || "USD" })}).`
+            : "Ledger continuous monitoring active. No unaddressed risks."}
         </p>
-        <Button size="sm" className="mt-3 w-full">
-          Review findings
+        <Button asChild size="sm" className="mt-3 w-full text-xs">
+          <Link to="/leaks" onClick={onNavigate}>
+            Review findings
+          </Link>
         </Button>
       </div>
     </div>

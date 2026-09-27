@@ -11,6 +11,7 @@ import {
 } from "./oauth.server";
 import { pullProviderData } from "./sync.server";
 import { ERP_PROVIDERS } from "./providers";
+import { detectAndPersistLeaksForUser } from "./leak-persistence.server";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -58,9 +59,15 @@ export async function beginOAuth(userId: string, provider: string, origin: strin
   }
   const state = randomBytes(24).toString("hex");
   const db = await admin();
-  const { error } = await db.from("erp_oauth_states").insert({ state, user_id: userId, provider });
+  const safeOrigin = origin && origin !== "null" && origin !== "undefined" ? origin : "http://localhost:8081";
+  const { error } = await db.from("erp_oauth_states").insert({
+    state,
+    user_id: userId,
+    provider,
+    origin: safeOrigin,
+  });
   if (error) throw new Error(error.message);
-  return { url: await buildAuthorizeUrl(provider, state, origin) };
+  return { url: await buildAuthorizeUrl(provider, state, safeOrigin) };
 }
 
 export async function completeOAuth(params: {
@@ -69,11 +76,12 @@ export async function completeOAuth(params: {
   origin: string;
   realmId?: string | undefined;
   location?: string | undefined;
+  accountsServer?: string | undefined;
 }) {
   const db = await admin();
   const { data: stateRow } = await db
     .from("erp_oauth_states")
-    .select("state, user_id, provider, created_at")
+    .select("state, user_id, provider, origin, created_at")
     .eq("state", params.state)
     .maybeSingle();
   if (!stateRow) throw new Error("This connection request expired. Start the connection again.");
@@ -81,11 +89,39 @@ export async function completeOAuth(params: {
 
   const provider = stateRow.provider as string;
   const userId = stateRow.user_id as string;
+  const effectiveOrigin = params.origin || (stateRow.origin as string) || "http://localhost:8081";
   const { exchangeCode } = await import("./oauth.server");
-  let tokens: StoredTokens = await exchangeCode(provider, params.code, params.origin);
+  let tokens: StoredTokens = await exchangeCode(provider, params.code, effectiveOrigin, params.accountsServer);
   if (params.realmId) tokens = { ...tokens, realm_id: params.realmId };
-  if (provider === "zoho_books" && params.location) {
-    tokens = { ...tokens, api_domain: tokens.api_domain ?? "https://www.zohoapis.com" };
+  if (params.accountsServer) tokens = { ...tokens, auth_server: params.accountsServer };
+
+  if (provider === "zoho_books") {
+    // Priority: 1) api_domain from token response (authoritative for user's account DC)
+    //           2) location param from callback URL
+    //           3) dc from erp_provider_config extra_config
+    const LOCATION_TO_DOMAIN: Record<string, string> = {
+      us: "https://www.zohoapis.com",
+      com: "https://www.zohoapis.com",
+      in: "https://www.zohoapis.in",
+      eu: "https://www.zohoapis.eu",
+      au: "https://www.zohoapis.com.au",
+      jp: "https://www.zohoapis.jp",
+      ca: "https://www.zohoapis.ca",
+    };
+    if (!tokens.api_domain) {
+      const locationDomain = params.location ? LOCATION_TO_DOMAIN[params.location.toLowerCase()] : undefined;
+      if (locationDomain) {
+        tokens = { ...tokens, api_domain: locationDomain };
+      } else {
+        const { data: cfg } = await db
+          .from("erp_provider_config")
+          .select("extra_config")
+          .eq("provider", "zoho_books")
+          .maybeSingle();
+        const dc = (cfg?.extra_config as Record<string, string> | null)?.["dc"] ?? "com";
+        tokens = { ...tokens, api_domain: LOCATION_TO_DOMAIN[dc] ?? "https://www.zohoapis.com" };
+      }
+    }
   }
 
   const { data: existing } = await db
@@ -177,11 +213,14 @@ export async function syncConnectionFor(userId: string, connectionId: string) {
       vendor_external_id: i.vendor_external_id ?? null,
       issue_date: i.issue_date ?? null,
       due_date: i.due_date ?? null,
-      amount: i.amount ?? null,
+      issued_at: i.issue_date ? `${i.issue_date}T00:00:00Z` : null,
+      due_at: i.due_date ? `${i.due_date}T00:00:00Z` : null,
+      customer_name: i.type === "invoice" ? (i.vendor_name ?? null) : null,
+      amount: i.amount ?? 0,
       tax_amount: i.tax_amount ?? null,
       amount_paid: i.amount_paid ?? null,
-      currency: i.currency ?? null,
-      status: i.status ?? null,
+      currency: i.currency || "USD",
+      status: i.status || "OPEN",
       type: i.type ?? null,
       raw: i.raw as never,
     }));
@@ -192,11 +231,14 @@ export async function syncConnectionFor(userId: string, connectionId: string) {
       reference: p.reference ?? null,
       invoice_external_id: p.invoice_external_id ?? null,
       vendor_name: p.vendor_name ?? null,
+      contact_name: p.vendor_name ?? null,
       paid_date: p.paid_date ?? null,
-      amount: p.amount ?? null,
-      currency: p.currency ?? null,
+      payment_date: p.paid_date ? `${p.paid_date}T00:00:00Z` : null,
+      amount: p.amount ?? 0,
+      currency: p.currency || "USD",
       method: p.method ?? null,
-      status: p.status ?? null,
+      status: p.status || "PAID",
+      type: p.type ?? "payment",
       raw: p.raw as never,
     }));
 
@@ -237,11 +279,30 @@ export async function syncConnectionFor(userId: string, connectionId: string) {
         .eq("id", run.id);
     }
 
+    // Run idempotent leak detection and persistence on the freshly synced records
+    let persistenceResult = { total: 0, inserted: 0, updated: 0, error: null as string | null };
+    try {
+      const res = await detectAndPersistLeaksForUser(userId);
+      persistenceResult = {
+        total: res.total,
+        inserted: res.inserted,
+        updated: res.updated,
+        error: null,
+      };
+    } catch (persistErr) {
+      const message = persistErr instanceof Error ? persistErr.message : String(persistErr);
+      console.error("[AutoAudit Persistence] Failed to persist detected leaks for user:", userId, message);
+      persistenceResult.error = message;
+    }
+
     return {
       vendors: vendorRows.length,
       invoices: invoiceRows.length,
       payments: paymentRows.length,
       accountName: data.accountName,
+      leaksDetected: persistenceResult.total,
+      leaksPersisted: persistenceResult.inserted + persistenceResult.updated,
+      persistenceError: persistenceResult.error,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

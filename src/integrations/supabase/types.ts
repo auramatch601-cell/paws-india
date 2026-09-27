@@ -189,10 +189,123 @@ export type Database = {
           },
         ]
       }
+      erp_leak_activity: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          leak_id: string
+          metadata: Json
+          user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          leak_id: string
+          metadata?: Json
+          user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          leak_id?: string
+          metadata?: Json
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_leak_activity_leak_id_fkey"
+            columns: ["leak_id"]
+            isOneToOne: false
+            referencedRelation: "erp_leaks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_leaks: {
+        Row: {
+          amount: number
+          assigned_to: string | null
+          connection_id: string | null
+          created_at: string
+          currency: string
+          detected_at: string
+          evidence: Json
+          fingerprint: string
+          id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          severity: string
+          source: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+          vendor_name: string
+        }
+        Insert: {
+          amount?: number
+          assigned_to?: string | null
+          connection_id?: string | null
+          created_at?: string
+          currency?: string
+          detected_at?: string
+          evidence?: Json
+          fingerprint: string
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+          vendor_name: string
+        }
+        Update: {
+          amount?: number
+          assigned_to?: string | null
+          connection_id?: string | null
+          created_at?: string
+          currency?: string
+          detected_at?: string
+          evidence?: Json
+          fingerprint?: string
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          vendor_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_leaks_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "erp_connections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       erp_oauth_states: {
         Row: {
           code_verifier: string | null
           created_at: string
+          origin: string
           provider: string
           redirect_to: string | null
           state: string
@@ -201,6 +314,7 @@ export type Database = {
         Insert: {
           code_verifier?: string | null
           created_at?: string
+          origin: string
           provider: string
           redirect_to?: string | null
           state: string
@@ -209,6 +323,7 @@ export type Database = {
         Update: {
           code_verifier?: string | null
           created_at?: string
+          origin?: string
           provider?: string
           redirect_to?: string | null
           state?: string
@@ -307,6 +422,65 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      erp_recovery_cases: {
+        Row: {
+          claim_reference: string | null
+          closed_at: string | null
+          created_at: string
+          currency: string
+          id: string
+          leak_id: string
+          notes: string | null
+          opened_at: string
+          owner_id: string | null
+          recovered_amount: number
+          stage: string
+          target_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claim_reference?: string | null
+          closed_at?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          leak_id: string
+          notes?: string | null
+          opened_at?: string
+          owner_id?: string | null
+          recovered_amount?: number
+          stage?: string
+          target_amount?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claim_reference?: string | null
+          closed_at?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          leak_id?: string
+          notes?: string | null
+          opened_at?: string
+          owner_id?: string | null
+          recovered_amount?: number
+          stage?: string
+          target_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_recovery_cases_leak_id_fkey"
+            columns: ["leak_id"]
+            isOneToOne: false
+            referencedRelation: "erp_leaks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       erp_sync_runs: {
         Row: {
@@ -494,7 +668,54 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      workflow_update_leak_status: {
+        Args: {
+          p_leak_id: string
+          p_actor_id: string
+          p_next_status: string
+          p_expected_status?: string | null
+          p_notes?: string | null
+        }
+        Returns: Json
+      }
+      workflow_assign_leak: {
+        Args: {
+          p_leak_id: string
+          p_actor_id: string
+          p_new_assignee?: string | null
+        }
+        Returns: Json
+      }
+      workflow_add_leak_note: {
+        Args: {
+          p_leak_id: string
+          p_actor_id: string
+          p_note: string
+        }
+        Returns: Json
+      }
+      workflow_open_recovery_case: {
+        Args: {
+          p_leak_id: string
+          p_actor_id: string
+          p_target_amount?: number | null
+          p_notes?: string | null
+          p_claim_reference?: string | null
+        }
+        Returns: Json
+      }
+      workflow_update_recovery_case: {
+        Args: {
+          p_recovery_case_id: string
+          p_actor_id: string
+          p_next_stage?: string | null
+          p_recovered_amount?: number | null
+          p_claim_reference?: string | null
+          p_notes?: string | null
+          p_owner_id?: string | null
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_permission:

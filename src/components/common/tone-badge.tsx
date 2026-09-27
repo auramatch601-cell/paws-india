@@ -50,6 +50,7 @@ const severityTone: Record<string, Tone> = {
 
 const statusTone: Record<string, Tone> = {
   new: "brand",
+  detected: "brand",
   investigating: "warning",
   recovering: "accent",
   recovered: "success",

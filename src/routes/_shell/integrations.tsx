@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, RefreshCw, Settings } from "lucide-react";
+import { Code2, Plus, RefreshCw, Settings } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { StatusBadge } from "@/components/common/tone-badge";
 import { Button } from "@/components/ui/button";
 import { ConnectWizard } from "@/components/erp/connect-wizard";
 import { ProviderConfigDialog } from "@/components/erp/provider-config-dialog";
+import { CustomApiDialog } from "@/components/erp/custom-api-dialog";
 import { SyncTimeline } from "@/components/erp/sync-timeline";
 import { ImportDashboard } from "@/components/erp/import-dashboard";
 import { ERP_PROVIDERS, type ErpConnectionView } from "@/lib/erp/providers";
@@ -53,6 +54,7 @@ function IntegrationsPage() {
   const [wizardProvider, setWizardProvider] = useState<string | undefined>(undefined);
   const [configOpen, setConfigOpen] = useState(false);
   const [configProvider, setConfigProvider] = useState<string | undefined>(undefined);
+  const [customApiOpen, setCustomApiOpen] = useState(false);
   const [activeSync, setActiveSync] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({ queryKey: ["erp-status"], queryFn: () => fetchStatus({}) });
@@ -201,7 +203,11 @@ function IntegrationsPage() {
                   </div>
                 ) : null}
 
-                {!p.oauth ? (
+                {p.id === "custom_api" ? (
+                  <p className="mt-4 rounded-md bg-primary/10 p-2 text-xs text-primary font-medium">
+                    Direct HTTP POST endpoint ready. Push bills and ledgers via REST API.
+                  </p>
+                ) : !p.oauth ? (
                   <p className="mt-4 rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
                     Enterprise onboarding required — your administrator provisions this connection.
                   </p>
@@ -228,7 +234,29 @@ function IntegrationsPage() {
                 )}
 
                 <div className="mt-auto flex gap-2 pt-4">
-                  {conn ? (
+                  {p.id === "custom_api" ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant={conn ? "outline" : "default"}
+                        className="flex-1 text-xs gap-1.5"
+                        onClick={() => setCustomApiOpen(true)}
+                      >
+                        <Code2 className="size-3.5" /> API Specs & Snippets
+                      </Button>
+                      {conn && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-destructive hover:bg-destructive/10"
+                          disabled={remove.isPending}
+                          onClick={() => remove.mutate(conn.id)}
+                        >
+                          Disconnect
+                        </Button>
+                      )}
+                    </>
+                  ) : conn ? (
                     <>
                       <Button
                         size="sm"
@@ -274,6 +302,12 @@ function IntegrationsPage() {
         onOpenChange={setConfigOpen}
         initialProvider={configProvider}
         onSaved={() => void qc.invalidateQueries({ queryKey: ["erp-status"] })}
+      />
+
+      <CustomApiDialog
+        open={customApiOpen}
+        onOpenChange={setCustomApiOpen}
+        onDataIngested={invalidate}
       />
     </>
   );

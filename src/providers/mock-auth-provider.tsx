@@ -4,8 +4,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyAccess, type AppPermission, type AppRole } from "@/lib/admin.functions";
-import { currentUser, workspaces } from "@/data/mock";
+import { currentUser } from "@/data/mock";
 import type { AppUser, RoleId } from "@/types";
+
+export interface WorkspaceInfo {
+  id: string;
+  name: string;
+  plan: string;
+  entities: number;
+}
 
 interface AuthContextValue {
   user: AppUser;
@@ -16,9 +23,9 @@ interface AuthContextValue {
   status: string;
   accessLoading: boolean;
   refreshAccess: () => void;
-  workspace: (typeof workspaces)[number];
+  workspace: WorkspaceInfo;
   setWorkspaceId: (id: string) => void;
-  workspaces: typeof workspaces;
+  workspaces: WorkspaceInfo[];
   /** Real Supabase session — null when signed out. */
   session: Session | null;
   loadingSession: boolean;
@@ -28,7 +35,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function MockAuthProvider({ children }: { children: ReactNode }) {
-  const [workspaceId, setWorkspaceId] = useState(workspaces[0]!.id);
+  const [workspaceId, setWorkspaceId] = useState("ws-primary");
   const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const queryClient = useQueryClient();
@@ -71,6 +78,14 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
       access?.profile?.full_name ?? meta["full_name"] ?? (session ? email.split("@")[0]! : currentUser.name);
     const role = (access?.role ?? "viewer") as AppRole;
     const permissions = (access?.permissions ?? []) as AppPermission[];
+    const company = access?.profile?.company ?? meta["company"] ?? "AutoAudit Workspace";
+    const userWorkspace = {
+      id: "ws-primary",
+      name: company,
+      plan: "Enterprise",
+      entities: 1,
+    };
+
     return {
       user: {
         ...currentUser,
@@ -93,9 +108,9 @@ export function MockAuthProvider({ children }: { children: ReactNode }) {
       status: access?.profile?.status ?? "active",
       accessLoading: accessQuery.isLoading,
       refreshAccess,
-      workspace: workspaces.find((w) => w.id === workspaceId) ?? workspaces[0]!,
+      workspace: userWorkspace,
       setWorkspaceId,
-      workspaces,
+      workspaces: [userWorkspace],
       session,
       loadingSession,
       signOut,

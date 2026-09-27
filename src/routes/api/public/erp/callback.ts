@@ -27,6 +27,7 @@ export const Route = createFileRoute("/api/public/erp/callback")({
             origin,
             realmId: url.searchParams.get("realmId") ?? undefined,
             location: url.searchParams.get("location") ?? undefined,
+            accountsServer: url.searchParams.get("accounts-server") ?? undefined,
           });
           return back({ connect: "success", provider: result.provider });
         } catch (err) {

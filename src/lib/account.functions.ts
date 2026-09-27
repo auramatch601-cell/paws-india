@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type AccountState = "unknown" | "unconfirmed" | "confirmed" | "blocked";
 
@@ -12,9 +13,14 @@ export interface AccountStatus {
  * tell the user exactly what to do next.
  */
 export const getAccountStatus = createServerFn({ method: "POST" })
-  .inputValidator((input: { email: string }) => ({ email: String(input.email ?? "").trim().toLowerCase() }))
+  .validator((input: { email: string }) => ({ email: String(input.email ?? "").trim().toLowerCase() }))
   .handler(async ({ data }): Promise<AccountStatus> => {
     if (!data.email || !data.email.includes("@")) return { state: "unknown", email: data.email };
+    if (!process.env["SUPABASE_SERVICE_ROLE_KEY"] && !process.env["SUPABASE_SECRET_KEY"]) {
+      // In environments without service role key, skip admin user lookup
+      // and allow standard password authentication to proceed.
+      return { state: "unknown", email: data.email };
+    }
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -42,3 +48,34 @@ export const getAccountStatus = createServerFn({ method: "POST" })
       return { state: "unknown", email: data.email };
     }
   });
+
+export const updateMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    (input: {
+      fullName?: string | undefined;
+      department?: string | undefined;
+      jobTitle?: string | undefined;
+      company?: string | undefined;
+    }) => input,
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const userId = context.userId;
+
+    const updates: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+    if (data.fullName !== undefined) updates["full_name"] = data.fullName.trim();
+    if (data.department !== undefined) updates["department"] = data.department.trim();
+    if (data.jobTitle !== undefined) updates["job_title"] = data.jobTitle.trim();
+    if (data.company !== undefined) updates["company"] = data.company.trim();
+
+    const { error } = await supabaseAdmin
+      .from("profiles")
+      .upsert({ id: userId, ...updates }, { onConflict: "id" });
+
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

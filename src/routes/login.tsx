@@ -153,7 +153,7 @@ function LoginPage() {
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="password">Password</Label>
-            <Link to="/forgot-password" className="text-xs font-medium text-primary hover:underline">Forgot?</Link>
+            <Link to="/forgot-password" search={email ? { email } : {}} className="text-xs font-medium text-primary hover:underline">Forgot?</Link>
           </div>
           <Input id="password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>

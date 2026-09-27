@@ -36,6 +36,7 @@ export interface NormalizedPayment {
   currency?: string | null;
   method?: string | null;
   status?: string | null;
+  type?: string | null;
   raw: unknown;
 }
 export interface PulledData {
@@ -145,6 +146,7 @@ async function pullXero(tokens: StoredTokens): Promise<PulledData> {
       currency: p.CurrencyRate ? null : null,
       method: p.PaymentType ?? null,
       status: p.Status ?? null,
+      type: "payment",
       raw: p,
     })),
   };
@@ -205,6 +207,7 @@ async function pullQuickBooks(tokens: StoredTokens): Promise<PulledData> {
       currency: p.CurrencyRef?.value ?? null,
       method: p.PayType ?? null,
       status: null,
+      type: "payment",
       raw: p,
     })),
   };
@@ -212,21 +215,73 @@ async function pullQuickBooks(tokens: StoredTokens): Promise<PulledData> {
 
 /* ----------------------------- Zoho Books ------------------------------- */
 async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
-  const domain = tokens.api_domain ?? "https://www.zohoapis.com";
   const h = { Authorization: `Zoho-oauthtoken ${tokens.access_token}` };
+
+  // Candidate Zoho API domains. If one DC returns Code 57 / 401 Unauthorized,
+  // we automatically probe the other regional DCs to find where the user's
+  // organization is actually hosted.
+  const candidateDomains = Array.from(
+    new Set(
+      [
+        tokens.api_domain,
+        "https://www.zohoapis.in",
+        "https://www.zohoapis.com",
+        "https://www.zohoapis.eu",
+        "https://www.zohoapis.com.au",
+        "https://www.zohoapis.ca",
+        "https://www.zohoapis.jp",
+      ].filter(Boolean) as string[],
+    ),
+  );
+
+  let workingDomain = tokens.api_domain ?? "https://www.zohoapis.com";
+  let orgs: any[] = [];
+  let lastAuthError: string | null = null;
+
+  for (const candidate of candidateDomains) {
+    try {
+      const res = await getJson(`${candidate}/books/v3/organizations`, h, "organizations");
+      if (res && Array.isArray(res["organizations"])) {
+        orgs = res["organizations"];
+        workingDomain = candidate;
+        lastAuthError = null;
+        break;
+      }
+    } catch (err: any) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.includes("code 57") ||
+        msg.includes("401") ||
+        msg.includes("Unauthorized") ||
+        msg.includes("not authorized")
+      ) {
+        lastAuthError = msg;
+        continue;
+      }
+      throw new Error(`Zoho Books: ${msg}`);
+    }
+  }
+
+  if (lastAuthError && orgs.length === 0) {
+    throw new Error(
+      `Zoho Books authorization error (code 57): The connected Zoho account is not authorized or has no active organization in Zoho Books.\n` +
+        `• Make sure you have logged into Zoho Books (https://books.zoho.com or https://books.zoho.in) and created an organization.\n` +
+        `• Verify that your account has Admin permissions in that organization.`,
+    );
+  }
+
   const zoho = async (path: string, step: string) => {
     try {
-      return await getJson(`${domain}/books/v3/${path}`, h, step);
+      return await getJson(`${workingDomain}/books/v3/${path}`, h, step);
     } catch (err) {
       throw new Error(`Zoho Books: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
-  const orgs = (await zoho("organizations", "organizations"))["organizations"] ?? [];
   const org = orgs.find((o: any) => o.organization_id === tokens.organization_id) ?? orgs[0];
   if (!org)
     throw new Error(
-      `Zoho Books: no organisation is available for this login — step "organizations", GET ${domain}/books/v3/organizations`,
+      `Zoho Books: no organisation is available for this login — step "organizations", GET ${workingDomain}/books/v3/organizations`,
     );
   const orgId = org.organization_id;
 
@@ -252,9 +307,11 @@ async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
 
 
 
+  const defaultCurrency = org.currency_code || "INR";
+
   return {
     accountName: org.name ?? "Zoho Books organisation",
-    tokens: { ...tokens, organization_id: orgId, api_domain: domain },
+    tokens: { ...tokens, organization_id: orgId, api_domain: workingDomain },
     vendors: contacts.map((c: any) => ({
       external_id: String(c.contact_id),
       name: c.contact_name ?? "Unknown",
@@ -274,8 +331,8 @@ async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
         amount: num(b.total),
         tax_amount: num(b.tax_total),
         amount_paid: num(b.payment_made),
-        currency: b.currency_code ?? null,
-        status: b.status ?? null,
+        currency: b.currency_code ?? defaultCurrency,
+        status: b.status ?? "OPEN",
         type: "bill",
         raw: b,
       })),
@@ -289,8 +346,8 @@ async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
         amount: num(i.total),
         tax_amount: num(i.tax_total),
         amount_paid: num(i.total) !== null && num(i.balance) !== null ? num(i.total)! - num(i.balance)! : null,
-        currency: i.currency_code ?? null,
-        status: i.status ?? null,
+        currency: i.currency_code ?? defaultCurrency,
+        status: i.status ?? "OPEN",
         type: "invoice",
         raw: i,
       })),
@@ -303,9 +360,10 @@ async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
         vendor_name: p.vendor_name ?? null,
         paid_date: dateOnly(p.date),
         amount: num(p.amount),
-        currency: p.currency_code ?? null,
+        currency: p.currency_code ?? defaultCurrency,
         method: p.payment_mode ?? null,
-        status: null,
+        status: "PAID",
+        type: "vendor_payment",
         raw: p,
       })),
       ...customerPayments.map((p: any) => ({
@@ -315,9 +373,10 @@ async function pullZohoBooks(tokens: StoredTokens): Promise<PulledData> {
         vendor_name: p.customer_name ?? null,
         paid_date: dateOnly(p.date),
         amount: num(p.amount),
-        currency: p.currency_code ?? null,
+        currency: p.currency_code ?? defaultCurrency,
         method: p.payment_mode ?? null,
-        status: null,
+        status: "PAID",
+        type: "customer_payment",
         raw: p,
       })),
     ],

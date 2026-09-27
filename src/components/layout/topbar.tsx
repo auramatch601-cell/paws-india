@@ -27,14 +27,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useTheme } from "@/providers/theme-provider";
 import { useMockAuth } from "@/providers/mock-auth-provider";
 import { roleMap } from "@/constants/navigation";
-import { alerts } from "@/data/mock";
+import { useNotifications } from "@/hooks/use-notifications";
 import { SeverityBadge } from "@/components/common/tone-badge";
 
 export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
   const { theme, toggleTheme } = useTheme();
   const { user } = useMockAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const role = roleMap[user.role];
-  const unread = alerts.filter((a) => !a.read).length;
 
   return (
     <header className="glass-panel sticky top-0 z-20 grid h-16 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-none border-x-0 border-t-0 px-4 lg:px-6">
@@ -80,31 +80,66 @@ export function Topbar({ onOpenNav }: { onOpenNav: () => void }) {
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
               <Bell className="size-4.5" />
-              {unread > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 grid size-4 place-items-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
-                  {unread}
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-[340px] p-0">
+          <PopoverContent align="end" className="w-[360px] p-0 shadow-lg">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <p className="text-sm font-semibold">Notifications</p>
-              <Link to="/notifications" className="text-xs text-primary hover:underline">
-                View all
-              </Link>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">Notifications</p>
+                {unreadCount > 0 && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                    {unreadCount} new
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllAsRead}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Mark all read
+                  </button>
+                )}
+                <Link to="/notifications" className="text-xs font-medium text-primary hover:underline">
+                  View all
+                </Link>
+              </div>
             </div>
             <ul className="max-h-80 divide-y divide-border overflow-y-auto">
-              {alerts.map((a) => (
-                <li key={a.id} className="px-4 py-3 transition-colors hover:bg-muted/50">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium">{a.title}</p>
-                    <SeverityBadge severity={a.severity} />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{a.description}</p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">{a.time}</p>
+              {notifications.length === 0 ? (
+                <li className="p-6 text-center text-xs text-muted-foreground">
+                  No notifications
                 </li>
-              ))}
+              ) : (
+                notifications.slice(0, 6).map((n) => (
+                  <li
+                    key={n.id}
+                    onClick={() => markAsRead(n.id)}
+                    className={`cursor-pointer px-4 py-3 transition-colors hover:bg-muted/50 ${
+                      !n.read ? "bg-primary/5" : ""
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {!n.read && (
+                          <span className="size-1.5 shrink-0 rounded-full bg-primary" />
+                        )}
+                        <p className="truncate text-sm font-medium">{n.title}</p>
+                      </div>
+                      <SeverityBadge severity={n.severity as any} />
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{n.description}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{n.timeFormatted}</p>
+                  </li>
+                ))
+              )}
             </ul>
           </PopoverContent>
         </Popover>

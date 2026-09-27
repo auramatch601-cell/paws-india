@@ -8,7 +8,14 @@ export type RoleId =
   | "viewer";
 
 export type Severity = "critical" | "high" | "medium" | "low";
-export type LeakStatus = "new" | "investigating" | "recovering" | "recovered" | "dismissed";
+export type LeakStatus = "detected" | "new" | "investigating" | "recovering" | "recovered" | "dismissed";
+
+export type RecoveryStage =
+  | "identified"
+  | "vendor_contacted"
+  | "claim_filed"
+  | "credit_issued"
+  | "recovered";
 
 export type LeakCategory =
   | "Duplicate Payment"
@@ -140,4 +147,53 @@ export interface SessionRecord {
   ip: string;
   lastActive: string;
   current: boolean;
+}
+
+export interface DurableLeakCase {
+  id: string;
+  userId: string;
+  connectionId: string | null;
+  fingerprint: string;
+  type: string;
+  title: string;
+  vendorName: string;
+  amount: number;
+  currency: string;
+  severity: Severity;
+  status: LeakStatus;
+  assignedTo: string | null;
+  source: string;
+  evidence: Record<string, unknown>;
+  resolutionNotes: string | null;
+  detectedAt: string;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeakActivityRecord {
+  id: string;
+  leakId: string;
+  userId: string;
+  actorId: string | null;
+  action: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface RecoveryCaseRecord {
+  id: string;
+  leakId: string;
+  userId: string;
+  stage: RecoveryStage;
+  targetAmount: number;
+  recoveredAmount: number;
+  currency: string;
+  ownerId: string | null;
+  claimReference: string | null;
+  notes: string | null;
+  openedAt: string;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

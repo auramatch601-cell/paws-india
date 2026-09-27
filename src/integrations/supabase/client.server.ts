@@ -29,29 +29,46 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
-function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env['SUPABASE_URL'];
-  const SUPABASE_SERVICE_ROLE_KEY = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+let hasWarnedMissingKey = false;
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
-      ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+function createSupabaseAdminClient() {
+  const SUPABASE_URL = process.env['SUPABASE_URL'] || process.env['VITE_SUPABASE_URL'];
+  const SUPABASE_SERVICE_ROLE_KEY =
+    process.env['SUPABASE_SERVICE_ROLE_KEY'] || process.env['SUPABASE_SECRET_KEY'];
+
+  if (!SUPABASE_URL) {
+    const message = "Missing Supabase environment variable(s): SUPABASE_URL. Check your .env file.";
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  const apiKey =
+    SUPABASE_SERVICE_ROLE_KEY ||
+    process.env['SUPABASE_PUBLISHABLE_KEY'] ||
+    process.env['VITE_SUPABASE_PUBLISHABLE_KEY'];
+
+  if (!apiKey) {
+    const message = "Missing Supabase API key (SUPABASE_SERVICE_ROLE_KEY or SUPABASE_PUBLISHABLE_KEY).";
+    console.error(`[Supabase] ${message}`);
+    throw new Error(message);
+  }
+
+  if (!SUPABASE_SERVICE_ROLE_KEY && !hasWarnedMissingKey) {
+    hasWarnedMissingKey = true;
+    console.warn(
+      `[Supabase] SUPABASE_SERVICE_ROLE_KEY is not set in .env. Falling back to publishable key for local development. Add SUPABASE_SERVICE_ROLE_KEY to .env to enable administrative / RLS-bypass operations.`,
+    );
+  }
+
+  return createClient<Database>(SUPABASE_URL, apiKey, {
     global: {
-      fetch: createSupabaseFetch(SUPABASE_SERVICE_ROLE_KEY),
+      fetch: createSupabaseFetch(apiKey),
     },
     auth: {
       storage: undefined,
       persistSession: false,
       autoRefreshToken: false,
-    }
+    },
   });
 }
 

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 export const APP_ROLES = [
   "admin",
@@ -40,9 +41,9 @@ export interface Member {
   createdAt: string | null;
 }
 
-type Ctx = { supabase: SupabaseClient<any>; userId: string };
+export type Ctx = { supabase: SupabaseClient<Database>; userId: string };
 
-async function roleOf(context: Ctx): Promise<AppRole> {
+export async function roleOf(context: Ctx): Promise<AppRole> {
   const { data } = await context.supabase
     .from("user_roles")
     .select("role")
@@ -52,10 +53,30 @@ async function roleOf(context: Ctx): Promise<AppRole> {
   return ((data as { role?: AppRole } | null)?.role ?? "viewer") as AppRole;
 }
 
-async function requireAdmin(context: Ctx) {
+export async function requireAdmin(context: Ctx) {
   const role = await roleOf(context);
   if (role !== "admin") throw new Error("Forbidden: admin role required");
   return role;
+}
+
+export async function hasPermission(context: Ctx, permission: AppPermission): Promise<boolean> {
+  const role = await roleOf(context);
+  if (role === "admin") return true;
+  const { data } = await context.supabase
+    .from("role_permissions")
+    .select("permission")
+    .eq("role", role)
+    .eq("permission", permission)
+    .maybeSingle();
+  return Boolean(data);
+}
+
+export async function requirePermission(context: Ctx, permission: AppPermission): Promise<AppRole> {
+  const allowed = await hasPermission(context, permission);
+  if (!allowed) {
+    throw new Error(`Forbidden: '${permission}' permission required`);
+  }
+  return roleOf(context);
 }
 
 /** Current user's role, permissions and profile. */
@@ -97,7 +118,7 @@ export const getPermissionMatrix = createServerFn({ method: "GET" })
 
 export const setRolePermission = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { role: AppRole; permission: AppPermission; enabled: boolean }) => input)
+  .validator((input: { role: AppRole; permission: AppPermission; enabled: boolean }) => input)
   .handler(async ({ data, context }) => {
     await requireAdmin(context as unknown as Ctx);
     if (data.role === "admin") throw new Error("The Admin role always keeps every permission.");
@@ -156,7 +177,7 @@ export const listMembers = createServerFn({ method: "GET" })
 
 export const setMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { userId: string; role: AppRole }) => input)
+  .validator((input: { userId: string; role: AppRole }) => input)
   .handler(async ({ data, context }) => {
     await requireAdmin(context as unknown as Ctx);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -177,7 +198,7 @@ export const setMemberRole = createServerFn({ method: "POST" })
 
 export const setMemberStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { userId: string; status: "active" | "suspended" }) => input)
+  .validator((input: { userId: string; status: "active" | "suspended" }) => input)
   .handler(async ({ data, context }) => {
     await requireAdmin(context as unknown as Ctx);
     if (data.userId === context.userId) throw new Error("You cannot suspend your own account.");
@@ -194,7 +215,7 @@ export const setMemberStatus = createServerFn({ method: "POST" })
 
 export const updateMemberProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       userId: string;
       fullName?: string | undefined;
@@ -219,7 +240,7 @@ export const updateMemberProfile = createServerFn({ method: "POST" })
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: {
       email: string;
       role: AppRole;
@@ -260,7 +281,7 @@ export const inviteMember = createServerFn({ method: "POST" })
 
 export const removeMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { userId: string }) => input)
+  .validator((input: { userId: string }) => input)
   .handler(async ({ data, context }) => {
     await requireAdmin(context as unknown as Ctx);
     if (data.userId === context.userId) throw new Error("You cannot remove your own account.");

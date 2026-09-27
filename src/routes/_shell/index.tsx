@@ -1,4 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { motion } from "motion/react";
 import {
   ArrowRight,
@@ -26,6 +28,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useErpOverview } from "@/hooks/use-erp";
+import { getDurableMetrics } from "@/lib/leak.functions";
 import { downloadCsv } from "@/lib/csv";
 import { compactCurrencyIn, currencyIn, dateShort, number, percent } from "@/lib/format";
 
@@ -50,7 +53,14 @@ export const Route = createFileRoute("/_shell/")({
 
 function DashboardPage() {
   const { data, isLoading, isFetching, refetch } = useErpOverview();
-  const code = data?.currencyCode;
+  const fetchMetrics = useServerFn(getDurableMetrics);
+  const { data: durableMetrics, isLoading: isMetricsLoading, refetch: refetchMetrics } = useQuery({
+    queryKey: ["durable-metrics"],
+    queryFn: () => fetchMetrics(),
+    staleTime: 30_000,
+  });
+
+  const code = durableMetrics?.currency || data?.currencyCode;
   const totals = data?.totals;
   const leaks = data?.leaks ?? [];
   const insights = data?.insights ?? [];
@@ -63,6 +73,10 @@ function DashboardPage() {
   const riskShare = totals && totals.spend > 0 ? totals.atRisk / totals.spend : 0;
   const healthScore = Math.max(0, Math.min(100, Math.round(100 - riskShare * 100)));
   const runs = data?.syncRuns ?? [];
+
+  const handleRefresh = async () => {
+    await Promise.all([refetch(), refetchMetrics()]);
+  };
 
   if (!isLoading && !data?.connected) {
     return (
@@ -81,7 +95,7 @@ function DashboardPage() {
     <>
       <PageHeader
         title="Financial control center"
-        description="Live view of the invoices, payments and vendors imported from your connected systems."
+        description="Live view of active durable leak cases, recovery claims and invoices imported from your connected systems."
         crumbs={[{ label: "Dashboard" }]}
         actions={
           <>
@@ -101,7 +115,7 @@ function DashboardPage() {
             >
               <Download className="size-4" /> Export
             </Button>
-            <Button className="gap-2" disabled={isFetching} onClick={() => void refetch()}>
+            <Button className="gap-2" disabled={isFetching} onClick={() => void handleRefresh()}>
               <RefreshCw className={`size-4 ${isFetching ? "animate-spin" : ""}`} /> Re-run analysis
             </Button>
           </>
@@ -111,39 +125,39 @@ function DashboardPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           index={0}
+          loading={isLoading || isMetricsLoading}
+          label="Total Identified Exposure"
+          value={compactCurrencyIn(durableMetrics?.totalExposure ?? totals?.atRisk ?? 0, code)}
+          icon={BadgeDollarSign}
+          tone="violet"
+          hint={`${number(durableMetrics?.activeLeaksCount ?? leaks.length)} active leak cases in register`}
+        />
+        <StatCard
+          index={1}
+          loading={isLoading || isMetricsLoading}
+          label="Active Recoveries"
+          value={number(durableMetrics?.activeRecoveriesCount ?? 0)}
+          icon={ShieldAlert}
+          tone="warning"
+          hint={`${compactCurrencyIn(durableMetrics?.activeRecoveriesTarget ?? 0, code)} in active claims`}
+        />
+        <StatCard
+          index={2}
+          loading={isLoading || isMetricsLoading}
+          label="Recovered Cash"
+          value={compactCurrencyIn(durableMetrics?.recoveredCash ?? 0, code)}
+          icon={Wallet}
+          tone="success"
+          hint="Actual cash recaptured from claims"
+        />
+        <StatCard
+          index={3}
           loading={isLoading}
           label="Financial health score"
           value={`${healthScore}/100`}
           icon={Gauge}
           tone="brand"
           hint={`${percent(riskShare)} of billed value is flagged`}
-        />
-        <StatCard
-          index={1}
-          loading={isLoading}
-          label="Money at risk"
-          value={compactCurrencyIn(totals?.atRisk ?? 0, code)}
-          icon={BadgeDollarSign}
-          tone="violet"
-          hint={`${number(leaks.length)} findings across ${data?.leakMix.length ?? 0} categories`}
-        />
-        <StatCard
-          index={2}
-          loading={isLoading}
-          label="Total billed value"
-          value={compactCurrencyIn(totals?.spend ?? 0, code)}
-          icon={Wallet}
-          tone="success"
-          hint={`${number(totals?.invoices ?? 0)} invoices and bills imported`}
-        />
-        <StatCard
-          index={3}
-          loading={isLoading}
-          label="Outstanding balance"
-          value={compactCurrencyIn(totals?.outstanding ?? 0, code)}
-          icon={ShieldAlert}
-          tone="warning"
-          hint={`${number(totals?.payments ?? 0)} payments recorded`}
         />
       </section>
 
